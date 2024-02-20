@@ -1,0 +1,10 @@
+__pycache__
+tb_log
+.vscode
+
+vis
+visualize
+visualization
+*.t
+log
+*.txt
