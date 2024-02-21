@@ -159,31 +159,6 @@ def fast_batch_collator(batched_inputs):
     elif isinstance(elem, string_classes):
         return batched_inputs
 
-    # elif isinstance(elem, np.ndarray): ###### add by me (for masks)
-    #     out = []
-    #     for i, array in enumerate(batched_inputs):
-    #         tensor = torch.tensor(array)
-    #         out.append(tensor)
-    #     out = torch.stack(out, dim=0)
-    #     return out
-    
-    # elif isinstance(elem, list):
-    #     out_g = []
-    #     out_pt1 = []
-    #     out_pt2 = []
-    #     out_pt3 = []
-    #     # out = torch.stack(elem, dim=0)
-    #     for i, tensor_list in enumerate(batched_inputs):
-    #         out_g.append(tensor_list[0])
-    #         out_pt1.append(tensor_list[1])
-    #         out_pt2.append(tensor_list[2])
-    #         out_pt3.append(tensor_list[3])
-    #     out = torch.stack(out_g, dim=0)
-    #     out_pt1 = torch.stack(out_pt1, dim=0)
-    #     out_pt2 = torch.stack(out_pt2, dim=0)
-    #     out_pt3 = torch.stack(out_pt3, dim=0)
-    #     return out, out_pt1, out_pt2, out_pt3
-
 
 def make_sampler(train_set, num_batch, num_instance, num_workers,
                  mini_batch_size, drop_last=True, flag1=True, flag2=True, seed=None, train_pids=None, cfg=None):
