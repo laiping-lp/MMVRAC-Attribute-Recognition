@@ -113,7 +113,7 @@ class UAVHuman(ImageDataset):
             if pid == -1: continue  # junk images are just ignored
             if is_train:
                 pid = self.dataset_name + "_" + str(pid)
-            # if relabel: pid = pid2label[pid]
+            # if relabel: pid = pid2label[pid] # relabel in common.py
             dataset.append((img_path, pid, camid))
 
         return dataset

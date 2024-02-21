@@ -7,7 +7,7 @@ First of all, create a conda env, then install packages detailed in enviroments.
 ```
 conda create -n reid python==3.9
 conda activate reid
-bash environments.sh
+bash enviroments.sh
 ```
 
 ### 2. training
