@@ -54,13 +54,13 @@ class UAVHuman(ImageDataset):
         self.gallery = gallery
         # """
 
-        # self.num_train_pids, self.num_train_imgs, self.num_train_cams = self.get_imagedata_info(self.train)
+        self.num_train_pids, self.num_train_imgs, self.num_train_cams = self.get_imagedata_info(self.train)
         
         # """Comment for Competition Splits
-        # self.num_query_pids, self.num_query_imgs, self.num_query_cams = self.get_imagedata_info(self.query)
-        # self.num_gallery_pids, self.num_gallery_imgs, self.num_gallery_cams = self.get_imagedata_info(self.gallery)
+        self.num_query_pids, self.num_query_imgs, self.num_query_cams = self.get_imagedata_info(self.query)
+        self.num_gallery_pids, self.num_gallery_imgs, self.num_gallery_cams = self.get_imagedata_info(self.gallery)
         # """
-        super(UAVHuman, self).__init__(train, query,gallery, **kwargs)
+        super(UAVHuman, self).__init__(train, query, gallery, **kwargs)
 
     def _check_before_run(self):
         """Check if all files are available before going deeper"""
@@ -117,3 +117,15 @@ class UAVHuman(ImageDataset):
             dataset.append((img_path, pid, camid))
 
         return dataset
+
+    def get_imagedata_info(self, data):
+        pids, cams = [], []
+        for _, pid, camid in data:
+            pids += [pid]
+            cams += [camid]
+        pids = set(pids)
+        cams = set(cams)
+        num_pids = len(pids)
+        num_cams = len(cams)
+        num_imgs = len(data)
+        return num_pids, num_imgs, num_cams
