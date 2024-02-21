@@ -40,7 +40,7 @@ DATALOADER:
 SOLVER:
   OPTIMIZER_NAME: 'SGD' # AdamW, SAM
   MAX_EPOCHS: 60
-  BASE_LR: 0.008 # 0.0004 for msmt
+  BASE_LR: 0.01 # 0.0004 for msmt
   IMS_PER_BATCH: 64
   LARGE_FC_LR: False
   CHECKPOINT_PERIOD: 5
@@ -62,8 +62,4 @@ TEST:
 LOG_ROOT: '/data4/liyuke/exp/' # root of log file
 TB_LOG_ROOT: './tb_log/'
 
-<<<<<<< HEAD
 LOG_NAME: 'uavhuman_vit_b12_rea_256x128_centerLoss_lr1e-2'
-=======
-LOG_NAME: 'uavhuman_vit_b16'
->>>>>>> 00952aeb8223d98d7148d6d90d34a08fd95ab2f9
