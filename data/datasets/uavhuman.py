@@ -78,8 +78,19 @@ class UAVHuman(ImageDataset):
 
     def _process_dir(self, dir_path, is_train=True):
         img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
+
+        # pid and camid patterns
         pattern_pid = re.compile(r'P([-\d]+)S([-\d]+)')
         pattern_camid = re.compile(r'A([-\d]+)R([-\d])_([-\d]+)_([-\d]+)')
+
+        # attributes patterns
+        pattern_gender = re.compile(r'G([-\d]+)')
+        pattern_backpack = re.compile(r'B([-\d]+)')
+        pattern_hat = re.compile(r'H([-\d]+)')
+        pattern_upper = re.compile(r'UC([-\d]+)')
+        pattern_lower = re.compile(r'LC([-\d]+)')
+        pattern_action = re.compile(r'A([-\d]+)')
+
         distractor_pid = 50000
 
         pid_container = set()
@@ -113,14 +124,37 @@ class UAVHuman(ImageDataset):
             if pid == -1: continue  # junk images are just ignored
             if is_train:
                 pid = self.dataset_name + "_" + str(pid)
+
+                # attributes infos
+                gender = int(pattern_gender.search(fname).groups()[0][0]) # 0: n/a; 1: male; 2: female
+                backpack = int(pattern_backpack.search(fname).groups()[0][0]) # 0: n/a; 1: red; 2: black; 3: green; 4: yellow; 5: n/a
+                hat = int(pattern_hat.search(fname).groups()[0][0]) # 0: n/a; 1: red; 2: black; 3: yellow; 4: white; 5: n/a
+                upper_cloth = pattern_upper.search(fname).groups()[0]
+                upper_color = int(upper_cloth[:2]) # 0: n/a; 1: red; 2: black; 3: blue; 4: green; 5: multicolor; 6: grey; 7: white; 8: yellow; 9: dark brown; 10: purple; 11: pink
+                upper_style = int(upper_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt
+                lower_cloth = pattern_lower.search(fname).groups()[0]
+                lower_color = int(lower_cloth[:2]) # 0: n/a; 1: red; 2: black; 3: blue; 4: green; 5: multicolor; 6: grey; 7: white; 8: yellow; 9: dark brown; 10: purple; 11: pink
+                lower_style = int(lower_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt
+                action = int(pattern_action.search(fname).groups()[0])
+                attributes = {
+                    "gender": gender,
+                    "backpack": backpack,
+                    "hat": hat,
+                    "upper_color": upper_color,
+                    "upper_style": upper_style,
+                    "lower_color": lower_color,
+                    "lower_style": lower_style
+                }
+            else:
+                attributes = None
             # if relabel: pid = pid2label[pid] # relabel in common.py
-            dataset.append((img_path, pid, camid))
+            dataset.append((img_path, pid, camid, attributes))
 
         return dataset
 
     def get_imagedata_info(self, data):
         pids, cams = [], []
-        for _, pid, camid in data:
+        for _, pid, camid, _ in data:
             pids += [pid]
             cams += [camid]
         pids = set(pids)

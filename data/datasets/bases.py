@@ -73,9 +73,9 @@ class Dataset(object):
         pids = set()
         cams = set()
         if len(data[0]) > 3:
-            for _, pid, camid, _ in data:
-                pids.add(pid)
-                cams.add(camid)
+            for info in data:
+                pids.add(info[1])
+                cams.add(info[2])
         else:
             for _, pid, camid in data:
                 pids.add(pid)

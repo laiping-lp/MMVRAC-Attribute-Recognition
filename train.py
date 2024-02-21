@@ -7,7 +7,7 @@ import numpy as np
 import argparse
 
 from config import cfg
-from processor.ori_vit_processor_with_amp import ori_vit_do_train_with_amp
+from processor.uavhuman_processor import uavhuman_do_train_with_amp
 from utils.logger import setup_logger
 from data.build_DG_dataloader import build_reid_train_loader, build_reid_test_loader
 from model import make_model
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     scheduler = create_scheduler(cfg, optimizer)
 
-    ori_vit_do_train_with_amp(
+    uavhuman_do_train_with_amp(
         cfg,
         model,
         center_criterion,
