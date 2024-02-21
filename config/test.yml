@@ -1,0 +1,66 @@
+MODEL:
+  PRETRAIN_CHOICE: 'imagenet' # imagenet, LUP
+  PRETRAIN_PATH: "/data4/liyuke/checkpoint" # root of pretrain path
+  METRIC_LOSS_TYPE: 'triplet_center' # triplet, triplet_center
+  DIM: 768
+  IF_LABELSMOOTH: 'on'
+  NAME: 'vit' # local_attention_vit, mask_vit, mae, DG_ssl_vit, color_vit, rotate_vit, resnet50, ibnnet50b, vit, distill_vit, prompt_vit, mix_vit, mem_vit, mem_tri_vit, mix_resnet, mix_ibnnet50a, mix_ibnnet50b
+  NO_MARGIN: True
+  DEVICE_ID: ('8')
+  TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID' # vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  STRIDE_SIZE: 12
+  DROP_PATH: 0.1 ###### avoid overfitting
+  # FREEZE_PATCH_EMBED: True
+  # FIXED_RES_BN: True
+
+INPUT:
+  SIZE_TRAIN: [256,128]
+  # SIZE_TRAIN: [384, 192]
+  SIZE_TEST: [256,128]
+  # SIZE_TEST: [384,192]
+  PIXEL_MEAN: [0.5, 0.5, 0.5]
+  PIXEL_STD: [0.5, 0.5, 0.5]
+  REA:
+    ENABLED: True
+  # LGT: # Local Grayscale Transfomation
+  #   DO_LGT: True
+  #   PROB: 0.5
+
+DATASETS:
+  TRAIN: ('UAVHuman',)
+  TEST: ('UAVHuman',)
+  ROOT_DIR: ('/data4/liyuke') # root of datasets
+
+DATALOADER:
+  SAMPLER: 'softmax_triplet' # softmax_triplet, graph_sampler, single_domain, center_hard_sampler
+  NUM_INSTANCE: 4
+  NUM_WORKERS: 8
+  CAMERA_TO_DOMAIN: True
+
+SOLVER:
+  OPTIMIZER_NAME: 'SGD' # AdamW, SAM
+  MAX_EPOCHS: 60
+  BASE_LR: 0.02 # 0.0004 for msmt
+  IMS_PER_BATCH: 64
+  LARGE_FC_LR: False
+  CHECKPOINT_PERIOD: 5
+  LOG_PERIOD: 60 ## 60
+  EVAL_PERIOD: 5
+  WEIGHT_DECAY:  1e-4
+  WEIGHT_DECAY_BIAS: 1e-4
+  BIAS_LR_FACTOR: 2
+  SEED: 1234
+
+TEST:
+  EVAL: True
+  IMS_PER_BATCH: 256
+  RE_RANKING: False
+  # WEIGHT: '/home/liyuke/data/exp/mix_vit/Duke_all/mix_vit_best.pth'
+  NECK_FEAT: 'before'
+  FEAT_NORM: True
+
+LOG_ROOT: '/data4/liyuke/exp/' # root of log file
+TB_LOG_ROOT: './tb_log/'
+
+LOG_NAME: 'uavhuman_vit_b12_rea_256x128_centerLoss_lr2e-2'
+LOG_NAME: 'debug'
