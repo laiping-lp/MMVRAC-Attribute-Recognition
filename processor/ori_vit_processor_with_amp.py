@@ -113,7 +113,7 @@ def ori_vit_do_train_with_amp(cfg,
             target_cam = informations['camid'].to(device)
             # ipath = informations['img_path']
             ori_label = informations['ori_label'].to(device)
-            t_domains = informations['others']['domains'].to(device)
+            # t_domains = informations['others']['domains'].to(device)
 
             optimizer.zero_grad()
             optimizer_center.zero_grad()
@@ -121,7 +121,7 @@ def ori_vit_do_train_with_amp(cfg,
             target = vid.to(device)
             target_cam = target_cam.to(device)
             ori_label = ori_label.to(device)
-            t_domains = t_domains.to(device)
+            # t_domains = t_domains.to(device)
 
             targets = torch.zeros((bs, classes)).scatter_(1, target.unsqueeze(1).data.cpu(), 1).to(device)
             model.to(device)
