@@ -11,8 +11,21 @@ bash enviroments.sh
 ```
 
 ### 2. training
-modify the paths and settings in config/uavhuman.yml, then
-``` python train.py ```
+Modify the paths and settings in config/uavhuman.yml, then
+
+```
+python train.py --config_file config/#your_config_name#.yml
+```
 
 ### 3. evaluation
-on the fly ...
+Modify TEST.WEIGHT as your trained model path in config/uavhuman.yml, then
+
+```
+python test.py --config_file config/uavhuman.yml
+```
+
+Otherwise, specifying the trained path in terminal is also valid:
+
+```
+python test.py --config_file config/uavhuman.yml TEST.WEIGHT ${your trained model path}
+```
