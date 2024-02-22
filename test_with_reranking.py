@@ -10,7 +10,7 @@ from utils.logger import setup_logger
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ReID Training")
     parser.add_argument(
-        "--config_file", default="./config/reid.yml", help="path to config file", type=str
+        "--config_file", default="./config/test.yml", help="path to config file", type=str
     )
     parser.add_argument("opts", help="Modify config options using the command-line", default=None,
                         nargs=argparse.REMAINDER)
@@ -46,9 +46,11 @@ if __name__ == "__main__":
     else:
         print("==== random param ====")
 
-    if 'DG' in cfg.DATASETS.TEST[0]:
-        do_inference_multi_targets(cfg, model, logger)
-    else:
-        for testname in cfg.DATASETS.TEST:
-            val_loader, num_query = build_reid_test_loader(cfg, testname)
-            do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
+    for testname in cfg.DATASETS.TEST:
+        val_loader, num_query = build_reid_test_loader(cfg, testname)
+        # no reranking (original result)
+        logger.info("=== original result ===")
+        do_inference(cfg, model, val_loader, num_query)
+        # with reranking
+        logger.info("=== reranking result ===")
+        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)

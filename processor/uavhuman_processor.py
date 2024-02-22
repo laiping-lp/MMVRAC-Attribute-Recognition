@@ -229,4 +229,4 @@ def uavhuman_do_train_with_amp(cfg,
     else:
         for testname in cfg.DATASETS.TEST:
             val_loader, num_query = build_reid_test_loader(cfg, testname)
-            do_inference(cfg, model, val_loader, num_query)
+            do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
