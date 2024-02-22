@@ -24,8 +24,6 @@ class Dataset(object):
         self.train = train
         self.query = query
         self.gallery = gallery
-        self.query = [tuple(q_tuple)+({'q_or_g': 'query'},) for q_tuple in self.query]
-        self.gallery = [tuple(g_tuple)+({'q_or_g': 'gallery'},) for g_tuple in self.gallery]
         self.transform = transform
         self.mode = mode
         self.combineall = combineall
