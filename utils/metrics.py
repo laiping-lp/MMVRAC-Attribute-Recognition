@@ -3,6 +3,7 @@ from time import time
 import torch
 import numpy as np
 import os
+from utils.query_aggregation import query_aggregate
 from utils.reranking import re_ranking
 
 def normalize(x, axis=-1):
@@ -107,7 +108,7 @@ def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50):
 
 
 class R1_mAP_eval():
-    def __init__(self, num_query, max_rank=50, feat_norm=True, reranking=False):
+    def __init__(self, num_query, max_rank=50, feat_norm=True, reranking=False, query_aggregate=True):
         super(R1_mAP_eval, self).__init__()
         self.num_query = num_query
         self.max_rank = max_rank
@@ -115,6 +116,7 @@ class R1_mAP_eval():
         if feat_norm:
             print("The test feature is normalized")
         self.reranking = reranking
+        self.query_aggregate = query_aggregate
 
     def reset(self):
         self.feats = []
@@ -141,13 +143,16 @@ class R1_mAP_eval():
 
         g_camids = np.asarray(self.camids[self.num_query:])
         if self.reranking:
-            print('=> Enter reranking')
             distmat = re_ranking(qf, gf, k1=4, k2=4, lambda_value=0.45)
             # distmat = re_ranking(qf, gf, k1=50, k2=15, lambda_value=0.3)
+            if self.query_aggregate:
+                distmat = query_aggregate(distmat, q_pids)
 
         else:
             # print('=> Computing DistMat with euclidean_distance')
             distmat = euclidean_dist(qf, gf)
+            if self.query_aggregate:
+                distmat = query_aggregate(distmat, q_pids)
         cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids)
 
         return cmc, mAP, distmat, self.pids, self.camids, qf, gf

@@ -26,6 +26,7 @@ import torch
 
 def re_ranking(probFea, galFea, k1, k2, lambda_value, local_distmat=None, only_local=False):
     # if feature vector is numpy, you should use 'torch.tensor' transform it to tensor
+    print('=> Enter reranking')
     query_num = probFea.size(0)
     all_num = query_num + galFea.size(0)
     if only_local:

@@ -12,13 +12,14 @@ def do_inference(cfg,
                  val_loader,
                  num_query,
                  reranking=False,
+                 query_aggregate=True,
                  iflog=True):
     device = "cuda"
     if iflog:
         logger = logging.getLogger("reid.test")
         logger.info("Enter inferencing")
 
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking=reranking)
+    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking=reranking, query_aggregate=query_aggregate)
 
     evaluator.reset()
 
