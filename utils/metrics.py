@@ -3,7 +3,6 @@ from time import time
 import torch
 import numpy as np
 import os
-from utils.query_aggregation import query_aggregate
 from utils.reranking import re_ranking
 
 def normalize(x, axis=-1):
