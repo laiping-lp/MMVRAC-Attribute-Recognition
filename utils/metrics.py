@@ -252,7 +252,7 @@ class R1_mAP_eval():
             distmat = euclidean_dist(qf, gf)
             if self.query_aggregate:
                 distmat = query_aggregate(distmat, q_pids)
-        cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids,self.query,self.gallery, self.log_path)
+        cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path)
 
         return cmc, mAP, distmat, self.pids, self.camids, qf, gf
 
