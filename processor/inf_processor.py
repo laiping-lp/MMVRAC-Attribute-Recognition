@@ -9,17 +9,18 @@ from utils.metrics import R1_mAP_eval
 
 def do_inference(cfg,
                  model,
+                 query,
+                 gallery,
                  val_loader,
                  num_query,
                  reranking=False,
-                 query_aggregate=True,
                  iflog=True):
     device = "cuda"
     if iflog:
         logger = logging.getLogger("reid.test")
         logger.info("Enter inferencing")
 
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking=reranking, query_aggregate=query_aggregate)
+    evaluator = R1_mAP_eval(cfg, num_query, query, gallery, max_rank=50,  feat_norm=cfg.TEST.FEAT_NORM, reranking=reranking)
 
     evaluator.reset()
 

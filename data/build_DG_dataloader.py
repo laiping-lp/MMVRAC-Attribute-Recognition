@@ -110,9 +110,9 @@ def build_reid_test_loader(cfg, dataset_name, opt=None, flag_test=True, shuffle=
             random.shuffle(test_items)
     else:
         test_items = dataset.train
-
+    query = dataset.query
+    gallery = dataset.gallery
     test_set = CommDataset(cfg, test_items, test_transforms, relabel=False)
-
     batch_size = bs if bs is not None else cfg.TEST.IMS_PER_BATCH
     data_sampler = samplers.InferenceSampler(len(test_set))
     batch_sampler = torch.utils.data.BatchSampler(data_sampler, batch_size, False)
@@ -128,7 +128,7 @@ def build_reid_test_loader(cfg, dataset_name, opt=None, flag_test=True, shuffle=
         batch_sampler=batch_sampler,
         num_workers=num_workers,  # save some memory
         collate_fn=fast_batch_collator)
-    return test_loader, len(dataset.query)
+    return query , gallery ,test_loader, len(dataset.query)
 
 
 def trivial_batch_collator(batch):
