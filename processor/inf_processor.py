@@ -9,10 +9,10 @@ from utils.metrics import R1_mAP_eval
 
 def do_inference(cfg,
                  model,
-                 query,
-                 gallery,
                  val_loader,
                  num_query,
+                 query=None,
+                 gallery=None,
                  reranking=False,
                  iflog=True):
     device = "cuda"

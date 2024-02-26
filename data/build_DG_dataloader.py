@@ -128,7 +128,7 @@ def build_reid_test_loader(cfg, dataset_name, opt=None, flag_test=True, shuffle=
         batch_sampler=batch_sampler,
         num_workers=num_workers,  # save some memory
         collate_fn=fast_batch_collator)
-    return query , gallery ,test_loader, len(dataset.query)
+    return query, gallery, test_loader, len(dataset.query)
 
 
 def trivial_batch_collator(batch):

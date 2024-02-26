@@ -47,5 +47,5 @@ if __name__ == "__main__":
         print("==== random param ====")
 
     for testname in cfg.DATASETS.TEST:
-        val_loader, num_query = build_reid_test_loader(cfg, testname)
+        _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
         do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)

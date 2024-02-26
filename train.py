@@ -79,7 +79,7 @@ if __name__ == '__main__':
     cfg.freeze()
     # build DG validate loader
     val_name = cfg.DATASETS.TEST[0]
-    val_loader, num_query = build_reid_test_loader(cfg, val_name)
+    _, _, val_loader, num_query = build_reid_test_loader(cfg, val_name)
     num_classes = len(train_loader.dataset.pids)
     model_name = cfg.MODEL.NAME
 
