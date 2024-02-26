@@ -46,9 +46,6 @@ if __name__ == "__main__":
     else:
         print("==== random param ====")
 
-    if 'DG' in cfg.DATASETS.TEST[0]:
-        do_inference_multi_targets(cfg, model, logger)
-    else:
-        for testname in cfg.DATASETS.TEST:
-            val_loader, num_query = build_reid_test_loader(cfg, testname)
-            do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
+    for testname in cfg.DATASETS.TEST:
+        val_loader, num_query = build_reid_test_loader(cfg, testname)
+        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
