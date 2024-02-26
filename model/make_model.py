@@ -357,7 +357,7 @@ class build_vit(nn.Module):
     def __init__(self, num_classes, cfg, factory, num_cls_dom_wise=None):
         super().__init__()
         self.cfg = cfg
-        model_path_base = cfg.MODEL.PRETRAIN_PATH
+        model_path = cfg.MODEL.PRETRAIN_PATH
         
         self.pretrain_choice = cfg.MODEL.PRETRAIN_CHOICE
         self.cos_layer = cfg.MODEL.COS_LAYER
@@ -381,10 +381,6 @@ class build_vit(nn.Module):
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
-            path = imagenet_path_name[cfg.MODEL.TRANSFORMER_TYPE]
-            self.model_path = os.path.join(model_path_base, path)
-            self.base.load_param(self.model_path)
-            print('Loading pretrained ImageNet model......from {}'.format(self.model_path))
         elif self.pretrain_choice == 'LUP':
             self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
                 (img_size=cfg.INPUT.SIZE_TRAIN,
@@ -393,10 +389,13 @@ class build_vit(nn.Module):
                 drop_rate= cfg.MODEL.DROP_OUT,
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE,
                 stem_conv=True)
-            path = lup_path_name[cfg.MODEL.TRANSFORMER_TYPE]
-            self.model_path = os.path.join(model_path_base, path)
-            self.base.load_param(self.model_path)
-            print('Loading pretrained LUP model......from {}'.format(self.model_path))
+        self.model_path = model_path
+        self.base.load_param(self.model_path)
+        print('Loading pretrained model......from {}'.format(self.model_path))
+            # path = lup_path_name[cfg.MODEL.TRANSFORMER_TYPE]
+            # self.model_path = os.path.join(model_path_base, path)
+            # self.base.load_param(self.model_path)
+            # print('Loading pretrained LUP model......from {}'.format(self.model_path))
             
         #### original one
         self.classifier = nn.Linear(self.in_planes, self.num_classes, bias=False)

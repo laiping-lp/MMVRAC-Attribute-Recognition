@@ -107,7 +107,7 @@ def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50):
 
 
 class R1_mAP_eval():
-    def __init__(self, num_query, max_rank=50, feat_norm=True, reranking=False, query_aggregate=True):
+    def __init__(self, num_query, max_rank=50, feat_norm=True, reranking=False, query_aggregate=False, feature_aggregate=False):
         super(R1_mAP_eval, self).__init__()
         self.num_query = num_query
         self.max_rank = max_rank
@@ -116,6 +116,7 @@ class R1_mAP_eval():
             print("The test feature is normalized")
         self.reranking = reranking
         self.query_aggregate = query_aggregate
+        self.feature_aggregate = feature_aggregate
 
     def reset(self):
         self.feats = []
@@ -134,6 +135,8 @@ class R1_mAP_eval():
             feats = torch.nn.functional.normalize(feats, dim=1, p=2)  # along channel
         # query
         qf = feats[:self.num_query]
+        if self.feature_aggregate:
+            qf = feat_aggregate(qf, q_pids)
         q_pids = np.asarray(self.pids[:self.num_query])
         q_camids = np.asarray(self.camids[:self.num_query])
         # gallery
@@ -169,7 +172,7 @@ def query_aggregate(distmat, q_pids):
     return distmat
 
 def feat_aggregate(qf, q_pids):
-    print('=> Enter query aggregation')
+    print('=> feature aggregation')
     uniq_ids = np.unique(q_pids)
     for pid in uniq_ids:
         indexs = np.argwhere(q_pids==pid).squeeze()
