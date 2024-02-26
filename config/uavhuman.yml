@@ -1,6 +1,6 @@
 MODEL:
   PRETRAIN_CHOICE: 'imagenet' # imagenet, LUP
-  PRETRAIN_PATH: "/data4/liyuke/checkpoint" # root of pretrain path
+  PRETRAIN_PATH: "/data4/liyuke/checkpoint/jx_vit_base_p16_224-80ecf9dd.pth" # root of pretrain path
   METRIC_LOSS_TYPE: 'triplet_center' # triplet, triplet_center
   DIM: 768
   IF_LABELSMOOTH: 'on'

@@ -48,7 +48,7 @@ def cosine_sim(qf, gf):
     return dist_mat
 
 
-def eval_func(cfg , distmat, q_pids, g_pids, q_camids, g_camids, query, gallery,max_rank=50):
+def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=None, gallery=None, log_path=None):
     """Evaluation with market1501 metric
         Key: for each query identity, its gallery images from the same camera view are discarded.
         """
@@ -110,15 +110,15 @@ def eval_func(cfg , distmat, q_pids, g_pids, q_camids, g_camids, query, gallery,
     mAP = np.mean(all_AP)
     
     # bad_case analyse
-    # file_path =  make_case_json(cfg, g_pids, query, gallery, indices, matches)
+    # file_path =  make_case_json(g_pids, query, gallery, indices, matches, log_path)
     # AP_indices = np.argsort(all_AP) # sort in ascending order
-    # root_dir = cfg.LOG_ROOT + "/" +  cfg.LOG_NAME
-    # gen_bad_case_img(root_dir, file_path,AP_indices,all_AP)
+    # root_dir = log_path
+    # gen_bad_case_img(root_dir, file_path, AP_indices, all_AP)
 
 
     return all_cmc, mAP
 
-def make_case_json(cfg, g_pids, query, gallery,indices,matches):
+def make_case_json(g_pids, query, gallery,indices,matches, log_path):
     cases_data = []
     for indexs,match,query in tqdm(zip(indices,matches,query)):
         case = {
@@ -149,13 +149,13 @@ def make_case_json(cfg, g_pids, query, gallery,indices,matches):
         # print(case)
         cases_data.append(case)
         # break
-    file_path = cfg.LOG_ROOT + "/" + cfg.LOG_NAME + "/cases.json"
+    file_path = os.path.join(log_path, "cases.json")
     with open(file_path,"w") as f:
         json.dump(cases_data,f)
     
     return file_path
     
-def gen_bad_case_img(root_dir, file_path,AP_indices,all_AP):
+def gen_bad_case_img(root_dir, file_path, AP_indices, all_AP):
     num_to_extract = int(len(AP_indices)* 0.02)
     with open(file_path,'r') as f:
         load_data = json.load(f)
@@ -201,14 +201,14 @@ def gen_bad_case_img(root_dir, file_path,AP_indices,all_AP):
 
 
 class R1_mAP_eval():
-    def __init__(self, cfg, num_query, query, gallery, max_rank=50,  feat_norm=True, reranking=False, query_aggregate=False, feature_aggregate=False):
+    def __init__(self, num_query, max_rank=50,  feat_norm=True, reranking=False, query_aggregate=False, feature_aggregate=False, query=None, gallery=None, log_path=None):
         super(R1_mAP_eval, self).__init__()
         self.num_query = num_query
         self.max_rank = max_rank
         self.feat_norm = feat_norm
         self.query = query
         self.gallery = gallery
-        self.cfg = cfg
+        self.log_path = log_path
         if feat_norm:
             print("The test feature is normalized")
         self.reranking = reranking
@@ -252,7 +252,7 @@ class R1_mAP_eval():
             distmat = euclidean_dist(qf, gf)
             if self.query_aggregate:
                 distmat = query_aggregate(distmat, q_pids)
-        cmc, mAP = eval_func(self.cfg ,distmat, q_pids, g_pids, q_camids, g_camids,self.query,self.gallery)
+        cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids,self.query,self.gallery, self.log_path)
 
         return cmc, mAP, distmat, self.pids, self.camids, qf, gf
 
