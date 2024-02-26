@@ -5,6 +5,10 @@ import numpy as np
 import os
 from utils.query_aggregation import query_aggregate
 from utils.reranking import re_ranking
+import json
+from tqdm import tqdm
+from PIL import Image
+import matplotlib.pyplot as plt
 
 def normalize(x, axis=-1):
     """Normalizing to unit length along the specified dimension.
@@ -45,7 +49,7 @@ def cosine_sim(qf, gf):
     return dist_mat
 
 
-def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50):
+def eval_func(cfg , distmat, q_pids, g_pids, q_camids, g_camids, query, gallery,max_rank=50):
     """Evaluation with market1501 metric
         Key: for each query identity, its gallery images from the same camera view are discarded.
         """
@@ -60,6 +64,7 @@ def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50):
     #  0 2 1 3
     #  1 2 3 0
     matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
+    
     # compute cmc curve for each query
     all_cmc = []
     all_AP = []
@@ -97,22 +102,114 @@ def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50):
         tmp_cmc = np.asarray(tmp_cmc) * orig_cmc
         AP = tmp_cmc.sum() / num_rel
         all_AP.append(AP)
+    
 
     assert num_valid_q > 0, "Error: all query identities do not appear in gallery"
 
     all_cmc = np.asarray(all_cmc).astype(np.float32)
     all_cmc = all_cmc.sum(0) / num_valid_q
     mAP = np.mean(all_AP)
+    
+    # bad_case analyse
+    # file_path =  make_case_json(cfg, g_pids, query, gallery, indices, matches)
+    # AP_indices = np.argsort(all_AP) # sort in ascending order
+    # root_dir = cfg.LOG_ROOT + "/" +  cfg.LOG_NAME
+    # gen_bad_case_img(root_dir, file_path,AP_indices,all_AP)
+
 
     return all_cmc, mAP
 
+def make_case_json(cfg, g_pids, query, gallery,indices,matches):
+    cases_data = []
+    for indexs,match,query in tqdm(zip(indices,matches,query)):
+        case = {
+            "query_path" : "",
+            "query_id": "", 
+            "top_50_results_ids" : "",
+            "top_50_results_matches": "" ,
+            "top_50_results_path": ""            
+            }
+        case["query_path"] = query[0]
+        case["query_id"] = query[1]
+        gid = []
+        gallery_path = []
+        top_50_results_matches = []
+        for i in indexs:
+            gid.append(int(g_pids[i]))
+            gallery_path.append(gallery[i])
+        top_50_results_ids = []
+        top_50_results_ids = gid[:50]
+        top_50_results_path = []
+        for path,match_ in zip(gallery_path,match[:50]):
+            top_50_results_path.append(path[0])
+            top_50_results_matches.append(int(match_))
+        # top_50_results_matches = match[:50]
+        case["top_50_results_ids"] = top_50_results_ids
+        case["top_50_results_matches"] = top_50_results_matches
+        case["top_50_results_path"] = top_50_results_path
+        # print(case)
+        cases_data.append(case)
+        # break
+    file_path = cfg.LOG_ROOT + "/" + cfg.LOG_NAME + "/cases.json"
+    with open(file_path,"w") as f:
+        json.dump(cases_data,f)
+    
+    return file_path
+    
+def gen_bad_case_img(root_dir, file_path,AP_indices,all_AP):
+    num_to_extract = int(len(AP_indices)* 0.02)
+    with open(file_path,'r') as f:
+        load_data = json.load(f)
+    
+    for idx in range(num_to_extract):
+        # print(idx)
+        query_idx = AP_indices[idx]
+        # print("AP",all_AP[query_idx])
+        query_path = load_data[query_idx]["query_path"]
+        # print("query_path:",query_path)
+        matchs = []
+        matchs = load_data[query_idx]["top_50_results_matches"]
+        result_path = []
+        result_path.append(query_path)
+        for i,path in enumerate(load_data[query_idx]["top_50_results_path"]):
+            if(i == 10):
+                break
+            result_path.append(path)
+        # print(result_path)
+        # print(matchs[:10])
+        fig, axs = plt.subplots(1,11, figsize=(12,3))
+        for j,image_path in enumerate(result_path):
+            image = Image.open(image_path)
+            # show image in subplots
+            axs[j].imshow(image)
+            axs[j].axis('off')
+            if(j==0):
+                axs[j].set_title("query",color = 'green')
+            elif matchs[j-1]:
+                axs[j].set_title("True",color = 'green')
+            else:
+                axs[j].set_title("False",color = 'red')
+        plt.tight_layout()
+        # plt.show()
+        save_path_folder = root_dir + "/bad_cases" 
+        if not os.path.exists(save_path_folder):
+            os.makedirs(save_path_folder)
+        save_path = os.path.join(save_path_folder,os.path.basename(query_path))
+        plt.savefig(save_path)
+        # break
+        
+
+
 
 class R1_mAP_eval():
-    def __init__(self, num_query, max_rank=50, feat_norm=True, reranking=False, query_aggregate=True):
+    def __init__(self, cfg, num_query, query, gallery, max_rank=50,  feat_norm=True, reranking=False, query_aggregate=True):
         super(R1_mAP_eval, self).__init__()
         self.num_query = num_query
         self.max_rank = max_rank
         self.feat_norm = feat_norm
+        self.query = query
+        self.gallery = gallery
+        self.cfg = cfg
         if feat_norm:
             print("The test feature is normalized")
         self.reranking = reranking
@@ -153,7 +250,7 @@ class R1_mAP_eval():
             distmat = euclidean_dist(qf, gf)
             if self.query_aggregate:
                 distmat = query_aggregate(distmat, q_pids)
-        cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids)
+        cmc, mAP = eval_func(self.cfg ,distmat, q_pids, g_pids, q_camids, g_camids,self.query,self.gallery)
 
         return cmc, mAP, distmat, self.pids, self.camids, qf, gf
 
