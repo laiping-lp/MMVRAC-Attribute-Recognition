@@ -7,3 +7,4 @@ pip install tensorboard
 pip install yacs
 pip install ftfy
 pip install regex
+pip install matplotlib
