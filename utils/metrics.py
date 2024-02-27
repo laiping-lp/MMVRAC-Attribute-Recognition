@@ -201,7 +201,7 @@ def gen_bad_case_img(root_dir, file_path, AP_indices, all_AP):
 
 
 class R1_mAP_eval():
-    def __init__(self, num_query, max_rank=50,  feat_norm=True, reranking=False, query_aggregate=False, feature_aggregate=False, query=None, gallery=None, log_path=None):
+    def __init__(self, num_query, max_rank=50,  feat_norm=True, reranking=False, query_aggregate=True, feature_aggregate=False, query=None, gallery=None, log_path=None):
         super(R1_mAP_eval, self).__init__()
         self.num_query = num_query
         self.max_rank = max_rank

@@ -587,6 +587,8 @@ class AttrViT(nn.Module):
             nn.Parameter(torch.zeros(5, num_patches + 1, embed_dim)),
         ])
 
+        self.attr_tokens = nn.Parameter(torch.zeros(1, 7, embed_dim)) ########
+
         print('using drop_out rate is : {}'.format(drop_rate))
         print('using attn_drop_out rate is : {}'.format(attn_drop_rate))
         print('using drop_path rate is : {}'.format(drop_path_rate))
