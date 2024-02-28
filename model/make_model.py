@@ -1,7 +1,7 @@
 import logging
 import os
 import random
-from model.backbones.vit_pytorch import TransReID, deit_tiny_patch16_224_TransReID, resize_pos_embed, vit_base_patch32_224_TransReID, vit_large_patch16_224_TransReID
+from model.backbones.vit_pytorch import TransReID, attr_vit_base_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, resize_pos_embed, vit_base_patch32_224_TransReID, vit_large_patch16_224_TransReID
 import torch
 import torch.nn as nn
 
@@ -512,30 +512,36 @@ class build_attr_vit(nn.Module):
         self.bottleneck.bias.requires_grad_(False)
         self.bottleneck.apply(weights_init_kaiming)
 
+        self.attr_head = nn.ModuleList([
+            nn.Linear(self.in_planes, 2, bias=False), # gender
+            nn.Linear(self.in_planes, 5, bias=False), # backpack
+            nn.Linear(self.in_planes, 5, bias=False), # hat
+            nn.Linear(self.in_planes, 12, bias=False), # upper cloth color 
+            nn.Linear(self.in_planes, 4, bias=False), # upper cloth style 
+            nn.Linear(self.in_planes, 12, bias=False), # lower cloth color 
+            nn.Linear(self.in_planes, 4, bias=False), # lower cloth style 
+        ])
+        for h in self.attr_head:
+            h.apply(weights_init_classifier)
+
     def forward(self, x, domain=None):
         x = self.base(x) # B, N, C
         global_feat = x[:, 0] # cls token for global feature
+        attr_tokens = x[:, 1:8]
 
         feat = self.bottleneck(global_feat)
+
+        attr_scores = []
+        for i, t in enumerate(attr_tokens):
+            score = self.attr_head[i](t)
+            attr_scores.append(score)
 
         if self.training:
             ### original
             cls_score = self.classifier(feat)
-            return cls_score, global_feat
-
-            # #### multi-domain head
-            # cls_score = self.classifier(feat)
-            # cls_score_ = []
-            # for i in range(len(self.classifiers)):
-            #     if i not in domain:
-            #         cls_score_.append(None)
-            #         continue
-            #     idx = torch.nonzero(domain==i).squeeze()
-            #     cls_score_.append(self.classifiers[i](feat[idx]))
-            # return cls_score, global_feat, target, cls_score_
-
+            return cls_score, global_feat, attr_scores
         else:
-            return feat if self.neck_feat == 'after' else global_feat
+            return feat, attr_scores if self.neck_feat == 'after' else global_feat, attr_scores
 
     def load_param(self, trained_path):
         param_dict = torch.load(trained_path)
