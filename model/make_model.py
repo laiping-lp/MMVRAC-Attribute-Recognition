@@ -681,7 +681,7 @@ def make_model(cfg, modelname, num_class, num_class_domain_wise=None):
         print('===========building vit===========')
     elif modelname == 'attr_vit':
         model = build_attr_vit(num_class, cfg, __factory_T_type, num_class_domain_wise)
-        print('===========building vit===========')
+        print('===========building attr_vit===========')
     else:
         model = Backbone(modelname, num_class, cfg, num_class_domain_wise)
         print('===========building ResNet===========')

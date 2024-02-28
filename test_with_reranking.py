@@ -51,7 +51,7 @@ if __name__ == "__main__":
         # break
         # no reranking (original result)
         logger.info("=== original result ===")
-        do_inference(cfg, model, val_loader, num_query, query=query, gallery=gallery)
+        do_inference(cfg, model, val_loader, num_query, query=query, gallery=gallery, gen_result = True)
         # with reranking
-        logger.info("=== reranking result ===")
-        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING, query=query, gallery=gallery)
+        # logger.info("=== reranking result ===")
+        # do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING, query=query, gallery=gallery)

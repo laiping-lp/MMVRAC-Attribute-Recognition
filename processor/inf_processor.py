@@ -15,13 +15,15 @@ def do_inference(cfg,
                  iflog=True,
                  query=None,
                  gallery=None,
+                 gen_result=False,
                 ):
     device = "cuda"
     if iflog:
         logger = logging.getLogger("reid.test")
         logger.info("Enter inferencing")
 
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking=reranking, query=query, gallery=gallery)
+    log_path = cfg.LOG_ROOT + cfg.LOG_NAME
+    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking = reranking, query = query, gallery = gallery,log_path = log_path,gen_result=False)
 
     evaluator.reset()
 
