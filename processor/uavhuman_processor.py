@@ -53,12 +53,9 @@ def uavhuman_do_train_with_amp(cfg,
 
     loss_meter = AverageMeter()
     loss_id_meter = AverageMeter()
-    loss_id_distinct_meter = AverageMeter()
     loss_tri_meter = AverageMeter()
-    loss_sct_meter = AverageMeter()
     loss_center_meter = AverageMeter()
-    loss_xded_meter = AverageMeter()
-    loss_tri_hard_meter = AverageMeter()
+    loss_attr_meter = AverageMeter()
     acc_meter = AverageMeter()
 
     evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)
@@ -75,12 +72,9 @@ def uavhuman_do_train_with_amp(cfg,
         start_time = time.time()
         loss_meter.reset()
         loss_id_meter.reset()
-        loss_id_distinct_meter.reset()
         loss_tri_meter.reset()
-        loss_sct_meter.reset()
         loss_center_meter.reset()
-        loss_xded_meter.reset()
-        loss_tri_hard_meter.reset()
+        loss_attr_meter.reset()
         acc_meter.reset()
         evaluator.reset()
         scheduler.step(epoch)
@@ -120,17 +114,18 @@ def uavhuman_do_train_with_amp(cfg,
 
                 #### attr loss
                 attr_targets = [
-                    torch.zeros((bs, 2)).scatter_(1, attributes[0].unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 5)).scatter_(1, attributes[1].unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 5)).scatter_(1, attributes[2].unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 12)).scatter_(1, attributes[3].unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 4)).scatter_(1, attributes[4].unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 12)).scatter_(1, attributes[5].unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 4)).scatter_(1, attributes[6].unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 2)).to(device).scatter_(1, attributes[0].unsqueeze(1), 1),
+                    torch.zeros((bs, 6)).to(device).scatter_(1, attributes[1].unsqueeze(1), 1),
+                    torch.zeros((bs, 6)).to(device).scatter_(1, attributes[2].unsqueeze(1), 1),
+                    torch.zeros((bs, 12)).to(device).scatter_(1, attributes[3].unsqueeze(1), 1),
+                    torch.zeros((bs, 4)).to(device).scatter_(1, attributes[4].unsqueeze(1), 1),
+                    torch.zeros((bs, 12)).to(device).scatter_(1, attributes[5].unsqueeze(1), 1),
+                    torch.zeros((bs, 4)).to(device).scatter_(1, attributes[6].unsqueeze(1), 1),
                     ]
                 # attr_targets = torch.tensor(attr_targets).to(device)
                 attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
-                loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)].mean(0).sum()
+                loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
+                loss_attr = sum([l.mean(0).sum() for l in loss_attr])
 
                 #### triplet loss
                 # target = targets.max(1)[1] ###### for mixup
@@ -174,14 +169,15 @@ def uavhuman_do_train_with_amp(cfg,
             loss_id_meter.update(loss_id.item(), bs)
             loss_tri_meter.update(loss_tri.item(), bs)
             loss_center_meter.update(center_weight*loss_center.item(), bs)
+            loss_attr_meter.update(loss_attr.item(), bs)
             acc_meter.update(acc, 1)
 
             torch.cuda.synchronize()
             if (n_iter + 1) % log_period == 0:
-                logger.info("Epoch[{}] Iteration[{}/{}] Loss: {:.3f}, id:{:.3f}, tri:{:.3f}, cen:{:.3f}, xded:{:.3f} Acc: {:.3f}, Base Lr: {:.2e}"
+                logger.info("Epoch[{}] Iteration[{}/{}] Loss: {:.3f}, id:{:.3f}, tri:{:.3f}, cen:{:.3f}, attr:{:.3f}, Acc: {:.3f}, Base Lr: {:.2e}"
                 .format(epoch, n_iter+1, len(train_loader),
                 loss_meter.avg, loss_id_meter.avg, loss_tri_meter.avg,
-                loss_center_meter.avg, acc_meter.avg, scheduler._get_lr(epoch)[0]))
+                loss_center_meter.avg, loss_attr_meter.avg, acc_meter.avg, scheduler._get_lr(epoch)[0]))
                 tbWriter.add_scalar('train/loss', loss_meter.avg, n_iter+1+(epoch-1)*len(train_loader))
                 tbWriter.add_scalar('train/acc', acc_meter.avg, n_iter+1+(epoch-1)*len(train_loader))
 

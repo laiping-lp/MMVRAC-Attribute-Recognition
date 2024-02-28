@@ -128,7 +128,7 @@ class UAVHuman(ImageDataset):
                 pid = self.dataset_name + "_" + str(pid)
 
                 # attributes infos
-                gender = int(pattern_gender.search(fname).groups()[0][0]) # 0: n/a; 1: male; 2: female
+                gender = int(pattern_gender.search(fname).groups()[0][0]) - 1 # 0: n/a; 1: male; 2: female
                 backpack = int(pattern_backpack.search(fname).groups()[0][0]) # 0: n/a; 1: red; 2: black; 3: green; 4: yellow; 5: n/a
                 hat = int(pattern_hat.search(fname).groups()[0][0]) # 0: n/a; 1: red; 2: black; 3: yellow; 4: white; 5: n/a
                 upper_cloth = pattern_upper.search(fname).groups()[0]
