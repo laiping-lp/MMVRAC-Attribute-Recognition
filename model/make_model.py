@@ -536,7 +536,7 @@ class build_attr_vit(nn.Module):
             cls_score = self.classifier(feat)
             return cls_score, global_feat, attr_scores
         else:
-            return feat, attr_scores if self.neck_feat == 'after' else global_feat, attr_scores
+            return feat if self.neck_feat == 'after' else global_feat
 
     def load_param(self, trained_path):
         param_dict = torch.load(trained_path)
