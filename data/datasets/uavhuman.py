@@ -128,7 +128,7 @@ class UAVHuman(ImageDataset):
                 pid = self.dataset_name + "_" + str(pid)
 
                 # attributes infos
-                gender = int(pattern_gender.search(fname).groups()[0][0]) # 0: n/a; 1: male; 2: female
+                gender = int(pattern_gender.search(fname).groups()[0][0]) - 1 # 0: n/a; 1: male; 2: female
                 backpack = int(pattern_backpack.search(fname).groups()[0][0]) # 0: n/a; 1: red; 2: black; 3: green; 4: yellow; 5: n/a
                 hat = int(pattern_hat.search(fname).groups()[0][0]) # 0: n/a; 1: red; 2: black; 3: yellow; 4: white; 5: n/a
                 upper_cloth = pattern_upper.search(fname).groups()[0]
@@ -138,15 +138,15 @@ class UAVHuman(ImageDataset):
                 lower_color = int(lower_cloth[:2]) # 0: n/a; 1: red; 2: black; 3: blue; 4: green; 5: multicolor; 6: grey; 7: white; 8: yellow; 9: dark brown; 10: purple; 11: pink
                 lower_style = int(lower_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt
                 action = int(pattern_action.search(fname).groups()[0])
-                attributes = [
-                    gender,
-                    backpack,
-                    hat,
-                    upper_color,
-                    upper_style,
-                    lower_color,
-                    lower_style
-                ]
+                attributes = {
+                    "gender": gender,
+                    "backpack": backpack,
+                    "hat": hat,
+                    "upper_color": upper_color,
+                    "upper_style": upper_style,
+                    "lower_color": lower_color,
+                    "lower_style": lower_style
+                }
             else:
                 attributes = None
             # if relabel: pid = pid2label[pid] # relabel in common.py

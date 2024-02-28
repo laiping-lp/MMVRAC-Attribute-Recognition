@@ -488,10 +488,6 @@ class build_attr_vit(nn.Module):
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
-            path = imagenet_path_name[cfg.MODEL.TRANSFORMER_TYPE]
-            self.model_path = os.path.join(model_path_base, path)
-            self.base.load_param(self.model_path)
-            print('Loading pretrained ImageNet model......from {}'.format(self.model_path))
         elif self.pretrain_choice == 'LUP':
             self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
                 (img_size=cfg.INPUT.SIZE_TRAIN,
@@ -500,10 +496,9 @@ class build_attr_vit(nn.Module):
                 drop_rate= cfg.MODEL.DROP_OUT,
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE,
                 stem_conv=True)
-            path = lup_path_name[cfg.MODEL.TRANSFORMER_TYPE]
-            self.model_path = os.path.join(model_path_base, path)
-            self.base.load_param(self.model_path)
-            print('Loading pretrained LUP model......from {}'.format(self.model_path))
+        self.model_path = model_path_base
+        self.base.load_param(self.model_path)
+        print('Loading pretrained model......from {}'.format(self.model_path))
             
         #### original one
         self.classifier = nn.Linear(self.in_planes, self.num_classes, bias=False)
@@ -514,8 +509,8 @@ class build_attr_vit(nn.Module):
 
         self.attr_head = nn.ModuleList([
             nn.Linear(self.in_planes, 2, bias=False), # gender
-            nn.Linear(self.in_planes, 5, bias=False), # backpack
-            nn.Linear(self.in_planes, 5, bias=False), # hat
+            nn.Linear(self.in_planes, 6, bias=False), # backpack
+            nn.Linear(self.in_planes, 6, bias=False), # hat
             nn.Linear(self.in_planes, 12, bias=False), # upper cloth color 
             nn.Linear(self.in_planes, 4, bias=False), # upper cloth style 
             nn.Linear(self.in_planes, 12, bias=False), # lower cloth color 
@@ -532,8 +527,8 @@ class build_attr_vit(nn.Module):
         feat = self.bottleneck(global_feat)
 
         attr_scores = []
-        for i, t in enumerate(attr_tokens):
-            score = self.attr_head[i](t)
+        for i in range(7):
+            score = self.attr_head[i](attr_tokens[:, i])
             attr_scores.append(score)
 
         if self.training:
@@ -541,7 +536,7 @@ class build_attr_vit(nn.Module):
             cls_score = self.classifier(feat)
             return cls_score, global_feat, attr_scores
         else:
-            return feat, attr_scores if self.neck_feat == 'after' else global_feat, attr_scores
+            return feat if self.neck_feat == 'after' else global_feat
 
     def load_param(self, trained_path):
         param_dict = torch.load(trained_path)
@@ -680,7 +675,7 @@ def make_model(cfg, modelname, num_class, num_class_domain_wise=None):
         model = build_vit(num_class, cfg, __factory_T_type, num_class_domain_wise)
         print('===========building vit===========')
     elif modelname == 'attr_vit':
-        model = build_attr_vit(num_class, cfg, __factory_T_type, num_class_domain_wise)
+        model = build_attr_vit(num_class, cfg, __factory_T_type)
         print('===========building attr_vit===========')
     else:
         model = Backbone(modelname, num_class, cfg, num_class_domain_wise)

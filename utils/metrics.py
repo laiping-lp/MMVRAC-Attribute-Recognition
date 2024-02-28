@@ -109,7 +109,7 @@ def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=No
     all_cmc = np.asarray(all_cmc).astype(np.float32)
     all_cmc = all_cmc.sum(0) / num_valid_q
     mAP = np.mean(all_AP)
-    
+    gen_result = gen_result
     if gen_result:
         # save query result
         file_path =  make_case_json(g_pids, query, gallery, indices, matches, log_path)

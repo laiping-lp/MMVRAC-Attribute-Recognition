@@ -580,14 +580,14 @@ class AttrViT(nn.Module):
         num_patches = self.patch_embed.num_patches
 
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
-
-        self.attr_embeds = nn.ModuleList([
-            nn.Parameter(torch.zeros(2, num_patches + 1, embed_dim)),
-            nn.Parameter(torch.zeros(5, num_patches + 1, embed_dim)),
-        ])
-
         self.attr_tokens = nn.Parameter(torch.zeros(1, 7, embed_dim)) ########
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1 + 7, embed_dim))
+
+        # self.attr_embeds = nn.ModuleList([
+        #     nn.Parameter(torch.zeros(2, num_patches + 1, embed_dim)),
+        #     nn.Parameter(torch.zeros(5, num_patches + 1, embed_dim)),
+        # ])
+
 
         print('using drop_out rate is : {}'.format(drop_rate))
         print('using attn_drop_out rate is : {}'.format(attn_drop_rate))
@@ -664,6 +664,20 @@ class AttrViT(nn.Module):
     def forward(self, x):
         x = self.forward_features(x)
         return x
+    
+    def resize_pos_embed(self, posemb, posemb_new, hight, width):
+        ntok_new = posemb_new.shape[1]
+
+        posemb_token, posemb_grid = posemb[:, :1], posemb[0, 1:]
+        ntok_new -= 1
+
+        gs_old = int(math.sqrt(len(posemb_grid)))
+        print('Resized position embedding from size:{} to size: {} with height:{} width: {}'.format(posemb.shape, posemb_new.shape, hight, width))
+        posemb_grid = posemb_grid.reshape(1, gs_old, gs_old, -1).permute(0, 3, 1, 2)
+        posemb_grid = F.interpolate(posemb_grid, size=(hight, width), mode='bilinear')
+        posemb_grid = posemb_grid.permute(0, 2, 3, 1).reshape(1, hight * width, -1)
+        posemb = torch.cat([posemb_token.repeat(1,8,1), posemb_grid], dim=1)
+        return posemb
 
     def load_param(self, model_path):
         param_dict = torch.load(model_path, map_location='cpu')
@@ -684,7 +698,7 @@ class AttrViT(nn.Module):
                 if 'distilled' in model_path:
                     print('distill need to choose right cls token in the pth')
                     v = torch.cat([v[:, 0:1], v[:, 2:]], dim=1)
-                v = resize_pos_embed(v, self.pos_embed, self.patch_embed.num_y, self.patch_embed.num_x)
+                v = self.resize_pos_embed(v, self.pos_embed, self.patch_embed.num_y, self.patch_embed.num_x)
             try:
                 self.state_dict()[k].copy_(v)
                 count += 1
