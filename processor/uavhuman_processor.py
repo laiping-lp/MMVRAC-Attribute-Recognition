@@ -116,8 +116,8 @@ def uavhuman_do_train_with_amp(cfg,
 
             # attributes
             attributes = informations['others']
-            for k in attributes.keys():
-                attributes[k] = attributes[k].to(device)
+            for attr in attributes:
+                attr = attr.to(device)
 
             optimizer.zero_grad()
             optimizer_center.zero_grad()
@@ -130,23 +130,37 @@ def uavhuman_do_train_with_amp(cfg,
             model.to(device)
             with amp.autocast(enabled=True):
                 loss_tri_hard = torch.tensor(0.,device=device)
-                score, feat = model(img, attributes)
-                ### id loss
-                log_probs = nn.LogSoftmax(dim=1)(score[:bs])
+                score, feat, attr_scores = model(img)
+                #### id loss
+                log_probs = nn.LogSoftmax(dim=1)(score)
                 targets = 0.9 * targets + 0.1 / classes # label smooth
                 loss_id = (- targets * log_probs).mean(0).sum()
+
+                #### attr loss
+                attr_targets = [
+                    torch.zeros((bs, 2)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 5)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 5)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 12)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 4)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 12)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 4)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
+                    ]
+                # attr_targets = torch.tensor(attr_targets).to(device)
+                attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
+                loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)].mean(0).sum()
 
                 #### triplet loss
                 # target = targets.max(1)[1] ###### for mixup
                 N = feat.shape[0]
-                dist_mat = euclidean_dist(feat, feat)[:bs]
+                dist_mat = euclidean_dist(feat, feat)
                 target_new = torch.cat([target,-torch.ones([N-bs], dtype=target.dtype, device=device)], dim=0)
                 is_pos = target_new.expand(N, N).eq(target_new.expand(N, N).t())
                 is_neg = target_new.expand(N, N).ne(target_new.expand(N, N).t())
                 dist_ap, relative_p_inds = torch.max(
-                    dist_mat[is_pos[:bs]].contiguous().view(bs, -1), 1, keepdim=True)
+                    dist_mat[is_pos].contiguous().view(bs, -1), 1, keepdim=True)
                 dist_an, relative_n_inds = torch.min(
-                    dist_mat[is_neg[:bs]].contiguous().view(bs, -1), 1, keepdim=True)
+                    dist_mat[is_neg].contiguous().view(bs, -1), 1, keepdim=True)
                 y = dist_an.new().resize_as_(dist_an).fill_(1)
                 loss_tri = nn.SoftMarginLoss()(dist_an - dist_ap, y)
                 # loss_tri = torch.tensor(0.0, device=device)
@@ -157,7 +171,7 @@ def uavhuman_do_train_with_amp(cfg,
                 else:
                     loss_center = torch.tensor(0.0, device=device)
 
-                loss = loss_id + loss_tri + center_weight * loss_center
+                loss = loss_id + loss_tri + center_weight * loss_center + loss_attr
 
             scaler.scale(loss).backward()
 
@@ -172,7 +186,7 @@ def uavhuman_do_train_with_amp(cfg,
             if isinstance(score, list):
                 acc = (score[0].max(1)[1] == target).float().mean()
             else:
-                acc = (score[:bs].max(1)[1] == target).float().mean()
+                acc = (score.max(1)[1] == target).float().mean()
 
             loss_meter.update(loss.item(), bs)
             loss_id_meter.update(loss_id.item(), bs)
@@ -228,5 +242,5 @@ def uavhuman_do_train_with_amp(cfg,
         do_inference_multi_targets(cfg, model, logger)
     else:
         for testname in cfg.DATASETS.TEST:
-            val_loader, num_query = build_reid_test_loader(cfg, testname)
+            _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
             do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)

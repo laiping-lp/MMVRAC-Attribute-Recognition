@@ -587,6 +587,8 @@ class AttrViT(nn.Module):
             nn.Parameter(torch.zeros(5, num_patches + 1, embed_dim)),
         ])
 
+        self.attr_tokens = nn.Parameter(torch.zeros(1, 7, embed_dim)) ########
+
         print('using drop_out rate is : {}'.format(drop_rate))
         print('using attn_drop_out rate is : {}'.format(attn_drop_rate))
         print('using drop_path rate is : {}'.format(drop_path_rate))
@@ -614,6 +616,7 @@ class AttrViT(nn.Module):
         # Classifier head
         self.fc = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
         trunc_normal_(self.cls_token, std=.02)
+        trunc_normal_(self.attr_tokens, std=.02)
         trunc_normal_(self.pos_embed, std=.02)
 
         self.apply(self._init_weights)
@@ -643,7 +646,9 @@ class AttrViT(nn.Module):
         x = self.patch_embed(x)
 
         cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
-        x = torch.cat((cls_tokens, x), dim=1)
+        attr_tokens = self.attr_tokens.expand(B, -1, -1)
+        # x = torch.cat((cls_tokens, x), dim=1)
+        x = torch.cat((cls_tokens, attr_tokens, x), dim=1)
 
         x = x + self.pos_embed
 
