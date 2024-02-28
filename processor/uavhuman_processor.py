@@ -86,26 +86,6 @@ def uavhuman_do_train_with_amp(cfg,
         scheduler.step(epoch)
         model.train()
         
-        ##### for fixed BN test
-        if cfg.MODEL.FIXED_RES_BN:
-            if 'res' in cfg.MODEL.NAME or 'ibn' in cfg.MODEL.NAME:
-                for name, mod in model.base.named_modules():
-                    if 'bn' in name:
-                        mod.eval()
-                        # totally freezed BN
-                        # mod.weight.requires_grad_(False)
-                        # mod.bias.requires_grad_(False)
-                print("====== freeze BNs ======")
-            else:
-                for name, mod in model.base.named_modules():
-                    if 'norm' in name:
-                        mod.eval()
-                        # totally freezed LN
-                        mod.weight.requires_grad_(False)
-                        mod.bias.requires_grad_(False)
-                print("====== freeze LNs ======")
-            
-        
         for n_iter, informations in enumerate(train_loader):
             img = informations['images'].to(device)
             # img = MixStyle_2d()(img) #### test
@@ -115,9 +95,11 @@ def uavhuman_do_train_with_amp(cfg,
             ori_label = informations['ori_label'].to(device)
 
             # attributes
-            attributes = informations['others']
-            for attr in attributes:
-                attr = attr.to(device)
+            attrs = informations['others']
+            attributes = []
+            for k in attrs.keys():
+                attrs[k] = attrs[k].to(device)
+                attributes.append(attrs[k])
 
             optimizer.zero_grad()
             optimizer_center.zero_grad()
@@ -138,13 +120,13 @@ def uavhuman_do_train_with_amp(cfg,
 
                 #### attr loss
                 attr_targets = [
-                    torch.zeros((bs, 2)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 5)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 5)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 12)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 4)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 12)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
-                    torch.zeros((bs, 4)).scatter_(1, target.unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 2)).scatter_(1, attributes[0].unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 5)).scatter_(1, attributes[1].unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 5)).scatter_(1, attributes[2].unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 12)).scatter_(1, attributes[3].unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 4)).scatter_(1, attributes[4].unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 12)).scatter_(1, attributes[5].unsqueeze(1).data.cpu(), 1),
+                    torch.zeros((bs, 4)).scatter_(1, attributes[6].unsqueeze(1).data.cpu(), 1),
                     ]
                 # attr_targets = torch.tensor(attr_targets).to(device)
                 attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr

@@ -90,7 +90,8 @@ if __name__ == '__main__':
 
     scheduler = create_scheduler(cfg, optimizer)
 
-    ori_vit_do_train_with_amp(
+    # ori_vit_do_train_with_amp(
+    uavhuman_do_train_with_amp(
         cfg,
         model,
         center_criterion,

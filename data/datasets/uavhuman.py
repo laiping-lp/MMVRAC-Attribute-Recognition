@@ -136,15 +136,15 @@ class UAVHuman(ImageDataset):
                 lower_color = int(lower_cloth[:2]) # 0: n/a; 1: red; 2: black; 3: blue; 4: green; 5: multicolor; 6: grey; 7: white; 8: yellow; 9: dark brown; 10: purple; 11: pink
                 lower_style = int(lower_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt
                 action = int(pattern_action.search(fname).groups()[0])
-                attributes = [
-                    gender,
-                    backpack,
-                    hat,
-                    upper_color,
-                    upper_style,
-                    lower_color,
-                    lower_style
-                ]
+                attributes = {
+                    "gender": gender,
+                    "backpack": backpack,
+                    "hat": hat,
+                    "upper_color": upper_color,
+                    "upper_style": upper_style,
+                    "lower_color": lower_color,
+                    "lower_style": lower_style
+                }
             else:
                 attributes = None
             # if relabel: pid = pid2label[pid] # relabel in common.py
