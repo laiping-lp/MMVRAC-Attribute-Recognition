@@ -91,16 +91,31 @@ if __name__ == '__main__':
     scheduler = create_scheduler(cfg, optimizer)
 
     # ori_vit_do_train_with_amp(
-    uavhuman_do_train_with_amp(
-        cfg,
-        model,
-        center_criterion,
-        train_loader,
-        val_loader,
-        optimizer,
-        optimizer_center,
-        scheduler,
-        loss_func,
-        num_query, args.local_rank,
-        num_pids = num_pids,
-    )
+    if cfg.MODEL.NAME == "vit":
+        ori_vit_do_train_with_amp(
+            cfg,
+            model,
+            center_criterion,
+            train_loader,
+            val_loader,
+            optimizer,
+            optimizer_center,
+            scheduler,
+            loss_func,
+            num_query, args.local_rank,
+            num_pids = num_pids,
+        )
+    elif cfg.MODEL.NAME == "attr_vit":
+        uavhuman_do_train_with_amp(
+            cfg,
+            model,
+            center_criterion,
+            train_loader,
+            val_loader,
+            optimizer,
+            optimizer_center,
+            scheduler,
+            loss_func,
+            num_query, args.local_rank,
+            num_pids = num_pids,
+        )
