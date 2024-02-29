@@ -519,7 +519,7 @@ class build_attr_vit(nn.Module):
         for h in self.attr_head:
             h.apply(weights_init_classifier)
 
-    def forward(self, x, domain=None):
+    def forward(self, x, fusion=0):
         x = self.base(x) # B, N, C
         global_feat = x[:, 0] # cls token for global feature
         attr_tokens = x[:, 1:8]
@@ -536,6 +536,8 @@ class build_attr_vit(nn.Module):
             cls_score = self.classifier(feat)
             return cls_score, global_feat, attr_scores
         else:
+            if fusion > 0:
+                return x[:, :fusion].mean(1).squeeze()
             return feat if self.neck_feat == 'after' else global_feat
 
     def load_param(self, trained_path):

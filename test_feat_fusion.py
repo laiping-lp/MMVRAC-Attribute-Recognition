@@ -3,7 +3,7 @@ from config import cfg
 import argparse
 from data.build_DG_dataloader import build_reid_test_loader
 from model import make_model
-from processor.inf_processor import do_inference, do_inference_multi_targets
+from processor.inf_processor import do_inference, do_inference_feat_fusion
 from utils.logger import setup_logger
 
 
@@ -48,4 +48,4 @@ if __name__ == "__main__":
 
     for testname in cfg.DATASETS.TEST:
         _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
-        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
+        do_inference_feat_fusion(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
