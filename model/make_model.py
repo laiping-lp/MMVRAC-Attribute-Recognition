@@ -555,6 +555,11 @@ class build_attr_vit(nn.Module):
                 count += 1
         print('Loading trained model from {}\n Load {}/{} layers'.format(trained_path, count, len(self.state_dict())))
         
+    def compute_num_params(self):
+        total = sum([param.nelement() for param in self.parameters()])
+        logger = logging.getLogger('reid.train')
+        logger.info("Number of parameter: %.2fM" % (total/1e6))
+        
 
 ## only cls token for multi-task classification
 class build_attr_vit_V2(nn.Module):
@@ -650,6 +655,11 @@ class build_attr_vit_V2(nn.Module):
                 self.state_dict()[i].copy_(param_dict[i])
                 count += 1
         print('Loading trained model from {}\n Load {}/{} layers'.format(trained_path, count, len(self.state_dict())))
+        
+    def compute_num_params(self):
+        total = sum([param.nelement() for param in self.parameters()])
+        logger = logging.getLogger('reid.train')
+        logger.info("Number of parameter: %.2fM" % (total/1e6))
 
 class build_diffusion_reid(nn.Module):
     def __init__(self, num_classes, cfg, factory, num_cls_dom_wise=None):
