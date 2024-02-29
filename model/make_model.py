@@ -537,7 +537,7 @@ class build_attr_vit(nn.Module):
             return cls_score, global_feat, attr_scores
         else:
             if fusion > 0:
-                return x[:, :fusion].mean(1).squeeze()
+                return x[:, :8]
             return feat if self.neck_feat == 'after' else global_feat
 
     def load_param(self, trained_path):
