@@ -145,7 +145,7 @@ def do_inference_feat_fusion(cfg,
         with torch.no_grad():
             img = img.to(device)
             # camids = camids.to(device)
-            feat = model(img, fusion=4)
+            feat = model(img, attr_recognition=True)
             feat_sync = feat[:, 0]*0.5 + (feat[:, 1] + feat[:, 3])/2*0.5
             # feat_sync = torch.cat([feat[:, 0], feat[:, 1], feat[:, 3]], dim=1)
             # feat_sync = (feat[:, 1] + feat[:, 2] + feat[:, 3])/3
