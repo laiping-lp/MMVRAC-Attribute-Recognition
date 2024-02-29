@@ -316,6 +316,8 @@ _C.TEST.WEIGHT = ""
 _C.TEST.NECK_FEAT = 'after'
 # Whether feature is nomalized before test, if yes, it is equivalent to cosine distance
 _C.TEST.FEAT_NORM = True
+# If test attribute recognition options: "True" , "False"
+_C.TEST.ATTRIBUTE_RECOGNITION = False
 
 # Name for saving the distmat after testing.
 _C.TEST.DIST_MAT = "dist_mat.npy"

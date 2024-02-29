@@ -107,6 +107,7 @@ def uavhuman_do_train_with_amp(cfg,
             with amp.autocast(enabled=True):
                 loss_tri_hard = torch.tensor(0.,device=device)
                 score, feat, attr_scores = model(img)
+                # import ipdb; ipdb.set_trace()
                 #### id loss
                 log_probs = nn.LogSoftmax(dim=1)(score)
                 targets = 0.9 * targets + 0.1 / classes # label smooth
@@ -126,6 +127,7 @@ def uavhuman_do_train_with_amp(cfg,
                 attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
                 loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
                 loss_attr = sum([l.mean(0).sum() for l in loss_attr])
+                # import ipdb; ipdb.set_trace()
 
                 #### triplet loss
                 # target = targets.max(1)[1] ###### for mixup

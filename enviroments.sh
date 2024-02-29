@@ -8,3 +8,6 @@ pip install yacs
 pip install ftfy
 pip install regex
 pip install matplotlib
+pip install tqdm
+pip install prettytable
+pip install pillow

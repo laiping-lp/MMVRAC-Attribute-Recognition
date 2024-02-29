@@ -35,8 +35,8 @@ if __name__ == "__main__":
         logger.info("Loaded configuration file {}".format(args.config_file))
         with open(args.config_file, 'r') as cf:
             config_str = "\n" + cf.read()
-            logger.info(config_str)
-    logger.info("Running with config:\n{}".format(cfg))
+            # logger.info(config_str)
+    # logger.info("Running with config:\n{}".format(cfg))
 
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID
 
@@ -49,9 +49,14 @@ if __name__ == "__main__":
     for testname in cfg.DATASETS.TEST:
         query, gallery, val_loader, num_query = build_reid_test_loader(cfg, testname)
         # break
+        # if want to generate case reslut, add "gen_result = True" in do_inference
         # no reranking (original result)
         logger.info("=== original result ===")
-        do_inference(cfg, model, val_loader, num_query, query=query, gallery=gallery, gen_result = True)
+        do_inference(cfg, model, val_loader, num_query, query=query, gallery=gallery,attr_recognition = cfg.TEST.ATTRIBUTE_RECOGNITION)
+        # with query aggregate
+        logger.info("=== query aggregate ===")
+        do_inference(cfg,model,val_loader,num_query,query=query,gallery=gallery,query_aggeregate=cfg.TEST.QUERY_AGGREGATE)
         # with reranking
-        # logger.info("=== reranking result ===")
-        # do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING, query=query, gallery=gallery)
+        logger.info("=== reranking result ===")
+        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING, query=query, gallery=gallery)
+        

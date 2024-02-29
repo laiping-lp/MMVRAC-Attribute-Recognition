@@ -34,8 +34,8 @@ class UAVHuman(ImageDataset):
         train = self._process_dir(self.train_dir, is_train=True)
         
         # """Comment for Competition Splits
-        query = self._process_dir(self.query_dir, is_train=False)
-        gallery = self._process_dir(self.gallery_dir, is_train=False)
+        query = self._process_dir(self.query_dir, is_train=True)
+        gallery = self._process_dir(self.gallery_dir, is_train=True)
         # """
 
         # if verbose:
