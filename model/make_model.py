@@ -554,17 +554,102 @@ class build_attr_vit(nn.Module):
                 self.state_dict()[i].copy_(param_dict[i])
                 count += 1
         print('Loading trained model from {}\n Load {}/{} layers'.format(trained_path, count, len(self.state_dict())))
+        
 
-    def load_param_finetune(self, model_path):
-        param_dict = torch.load(model_path)
+## only cls token for multi-task classification
+class build_attr_vit_V2(nn.Module):
+    def __init__(self, num_classes, cfg, factory):
+        super().__init__()
+        self.cfg = cfg
+        model_path_base = cfg.MODEL.PRETRAIN_PATH
+        
+        self.pretrain_choice = cfg.MODEL.PRETRAIN_CHOICE
+        self.cos_layer = cfg.MODEL.COS_LAYER
+        self.neck = cfg.MODEL.NECK
+        self.neck_feat = cfg.TEST.NECK_FEAT
+        if cfg.MODEL.TRANSFORMER_TYPE in in_plane_dict:
+            self.in_planes = in_plane_dict[cfg.MODEL.TRANSFORMER_TYPE]
+        else:
+            print("===== unknown transformer type =====")
+            self.in_planes = 768
+
+        print('using Transformer_type: vit as a backbone')
+
+        self.gap = nn.AdaptiveAvgPool2d(1)
+        self.num_classes = num_classes
+
+        if self.pretrain_choice == 'imagenet':
+            self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
+                (img_size=cfg.INPUT.SIZE_TRAIN,
+                stride_size=cfg.MODEL.STRIDE_SIZE,
+                drop_path_rate=cfg.MODEL.DROP_PATH,
+                drop_rate= cfg.MODEL.DROP_OUT,
+                attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
+        elif self.pretrain_choice == 'LUP':
+            self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
+                (img_size=cfg.INPUT.SIZE_TRAIN,
+                stride_size=cfg.MODEL.STRIDE_SIZE,
+                drop_path_rate=cfg.MODEL.DROP_PATH,
+                drop_rate= cfg.MODEL.DROP_OUT,
+                attn_drop_rate=cfg.MODEL.ATT_DROP_RATE,
+                stem_conv=True)
+        self.model_path = model_path_base
+        self.base.load_param(self.model_path)
+        print('Loading pretrained model......from {}'.format(self.model_path))
+            
+        #### original one
+        self.classifier = nn.Linear(self.in_planes, self.num_classes, bias=False)
+        self.classifier.apply(weights_init_classifier)
+        self.bottleneck = nn.BatchNorm1d(self.in_planes)
+        self.bottleneck.bias.requires_grad_(False)
+        self.bottleneck.apply(weights_init_kaiming)
+
+        self.attr_head = nn.ModuleList([
+            nn.Linear(self.in_planes, 2, bias=False), # gender
+            nn.Linear(self.in_planes, 6, bias=False), # backpack
+            nn.Linear(self.in_planes, 6, bias=False), # hat
+            nn.Linear(self.in_planes, 12, bias=False), # upper cloth color 
+            nn.Linear(self.in_planes, 4, bias=False), # upper cloth style 
+            nn.Linear(self.in_planes, 12, bias=False), # lower cloth color 
+            nn.Linear(self.in_planes, 4, bias=False), # lower cloth style 
+        ])
+        for h in self.attr_head:
+            h.apply(weights_init_classifier)
+
+    def forward(self, x, attr_recognition=False):
+        x = self.base(x) # B, N, C
+        global_feat = x[:, 0] # cls token for global feature
+
+        feat = self.bottleneck(global_feat)
+
+        attr_scores = []
+        for i in range(7):
+            score = self.attr_head[i](global_feat)
+            attr_scores.append(score)
+
+        # import ipdb; ipdb.set_trace() 
+
+        if self.training:
+            ### original
+            cls_score = self.classifier(feat)
+            return cls_score, global_feat, attr_scores
+        else:
+            if attr_recognition:
+                return x[:, :8], attr_scores
+            return feat if self.neck_feat == 'after' else global_feat
+
+    def load_param(self, trained_path):
+        param_dict = torch.load(trained_path)
+        count = 0
         for i in param_dict:
-            self.state_dict()[i].copy_(param_dict[i])
-        print('Loading pretrained model for finetuning from {}'.format(model_path))
-
-    def compute_num_params(self):
-        total = sum([param.nelement() for param in self.parameters()])
-        logger = logging.getLogger('reid.train')
-        logger.info("Number of parameter: %.2fM" % (total/1e6))
+            if 'classifier' in i: # drop classifier
+                continue
+            # if 'bottleneck' in i:
+            #     continue
+            if i in self.state_dict().keys():
+                self.state_dict()[i].copy_(param_dict[i])
+                count += 1
+        print('Loading trained model from {}\n Load {}/{} layers'.format(trained_path, count, len(self.state_dict())))
 
 class build_diffusion_reid(nn.Module):
     def __init__(self, num_classes, cfg, factory, num_cls_dom_wise=None):
@@ -680,6 +765,9 @@ def make_model(cfg, modelname, num_class, num_class_domain_wise=None):
         print('===========building vit===========')
     elif modelname == 'attr_vit':
         model = build_attr_vit(num_class, cfg, __factory_T_type)
+        print('===========building attr_vit===========')
+    elif modelname == 'attr_vit_only_cls':
+        model = build_attr_vit_V2(num_class, cfg, __factory_T_type)
         print('===========building attr_vit===========')
     else:
         model = Backbone(modelname, num_class, cfg, num_class_domain_wise)

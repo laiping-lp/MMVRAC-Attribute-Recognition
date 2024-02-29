@@ -7,7 +7,7 @@ import numpy as np
 import argparse
 
 from config import cfg
-from processor.uavhuman_processor import uavhuman_do_train_with_amp
+from processor.uavhuman_processor import attr_vit_do_train_with_amp
 from processor.ori_vit_processor_with_amp import ori_vit_do_train_with_amp
 from utils.logger import setup_logger
 from data.build_DG_dataloader import build_reid_train_loader, build_reid_test_loader
@@ -105,8 +105,8 @@ if __name__ == '__main__':
             num_query, args.local_rank,
             num_pids = num_pids,
         )
-    elif cfg.MODEL.NAME == "attr_vit":
-        uavhuman_do_train_with_amp(
+    elif "attr_vit" in cfg.MODEL.NAME:
+        attr_vit_do_train_with_amp(
             cfg,
             model,
             center_criterion,
