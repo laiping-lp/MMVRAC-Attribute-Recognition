@@ -103,9 +103,7 @@ def do_inference(cfg,
         logger.info("total inference time: {:.2f}".format(time.time() - t0))
     return cmc, mAP
 
-<<<<<<< HEAD
 
-=======
 def do_inference_feat_fusion(cfg,
                  model,
                  val_loader,
@@ -161,12 +159,15 @@ def do_inference_feat_fusion(cfg,
     cmc, mAP, _, _, _, _, _ = evaluator.compute()
     if iflog:
         logger.info("Validation Results ")
-        logger.info("mAP: {:.1%}".format(mAP))
-        for r in [1, 5, 10]:
-            logger.info("CMC curve, Rank-{:<3}:{:.1%}".format(r, cmc[r - 1]))
+        table = PrettyTable(["task", "mAP", "R1", "R5", "R10"])
+        table.add_row(['Reid', mAP, cmc[0],cmc[4], cmc[9]])
+        table.custom_format["R1"] = lambda f, v: f"{v:.3f}"
+        table.custom_format["R5"] = lambda f, v: f"{v:.3f}"
+        table.custom_format["R10"] = lambda f, v: f"{v:.3f}"
+        table.custom_format["mAP"] = lambda f, v: f"{v:.3f}"
+        logger.info('\n' + str(table))
         logger.info("total inference time: {:.2f}".format(time.time() - t0))
     return cmc, mAP
->>>>>>> 074e81558824aa6e19d986ca0be4a7bbcedfc5ea
 
 def do_inference_multi_targets(cfg,
                  model,

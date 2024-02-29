@@ -34,8 +34,8 @@ class UAVHuman(ImageDataset):
         train = self._process_dir(self.train_dir, is_train=True)
         
         # """Comment for Competition Splits
-        query = self._process_dir(self.query_dir, is_train=False)
-        gallery = self._process_dir(self.gallery_dir, is_train=False)
+        query = self._process_dir(self.query_dir, is_train=True)
+        gallery = self._process_dir(self.gallery_dir, is_train=True)
         # """
 
         # if verbose:
@@ -97,7 +97,7 @@ class UAVHuman(ImageDataset):
         for img_path in img_paths:
             fname = osp.split(img_path)[-1]
             if fname.startswith('D'):
-                # continue
+                continue
                 pid = int(distractor_pid)
             else:
                 pid_part1, pid_part2 = pattern_pid.search(fname).groups()
@@ -115,7 +115,7 @@ class UAVHuman(ImageDataset):
         for img_path in img_paths:
             fname = osp.split(img_path)[-1]
             if fname.startswith('D'):
-                # continue
+                continue
                 pid = int(distractor_pid)
                 camid = int(fname[-13:-8])
             else:
