@@ -6,6 +6,14 @@ import torch.nn as nn
 from data.build_DG_dataloader import build_reid_test_loader
 
 from utils.metrics import R1_mAP_eval
+from utils.attribute_recognition import Attribute_Recognition
+
+from prettytable import PrettyTable
+from PIL import Image
+import matplotlib.pyplot as plt
+import shutil
+import os
+import json
 
 def do_inference(cfg,
                  model,
@@ -16,6 +24,8 @@ def do_inference(cfg,
                  query=None,
                  gallery=None,
                  gen_result=False,
+                 query_aggeregate=False,
+                 attr_recognition=False,
                 ):
     device = "cuda"
     if iflog:
@@ -23,7 +33,7 @@ def do_inference(cfg,
         logger.info("Enter inferencing")
 
     log_path = cfg.LOG_ROOT + cfg.LOG_NAME
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking = reranking, query = query, gallery = gallery, log_path = log_path, gen_result=gen_result, query_aggregate=cfg.TEST.QUERY_AGGREGATE)
+    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking = reranking, query = query, gallery = gallery, log_path = log_path, gen_result=gen_result, query_aggregate=query_aggeregate)
 
     evaluator.reset()
 
@@ -37,19 +47,40 @@ def do_inference(cfg,
     img_path_list = []
     torch.cuda.synchronize()
     t0 = time.time()
-
+    bs = cfg.SOLVER.IMS_PER_BATCH # altered by lyk
+    
+    attributes = []
+    attr_classes = []
     for n_iter, informations in enumerate(val_loader):
         img = informations['images']
         pid = informations['targets']
         camids = informations['camid']
         imgpath = informations['img_path']
-        # domains = informations['others']['domains']
+
+        # attributes
+        attrs = informations['others']
+        
+        
+        for k in attrs.keys():
+            attrs[k] = attrs[k].to(device)
+            attributes.append(attrs[k])
         with torch.no_grad():
             img = img.to(device)
-            # camids = camids.to(device)
-            feat = model(img)
+            feat, attr_scores  = model(img)
+            for scores in attr_scores:
+                class_indices = torch.argmax(scores, dim=1)
+                attr_classes.append(class_indices.tolist())
+                
             evaluator.update((feat, pid, camids))
             img_path_list.extend(imgpath)
+
+    if attr_recognition:
+        # if want to get attribute recognition wrong result, set "gen_attr_result = True"
+        accuracy_per_attribute = Attribute_Recognition(cfg,attributes,attr_classes,val_loader,gen_attr_reslut = False)
+        table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
+        formatted_accuracy = ["{:.3f}".format(accuracy) for accuracy in accuracy_per_attribute]
+        table.add_row(["Attribute Recognition"] + formatted_accuracy)
+        logger.info('\n' + str(table))
 
     total_f_time = time.time() - t0
     single_f_time = total_f_time / (len(val_loader) * img.shape[0])
@@ -62,11 +93,17 @@ def do_inference(cfg,
     cmc, mAP, _, _, _, _, _ = evaluator.compute()
     if iflog:
         logger.info("Validation Results ")
-        logger.info("mAP: {:.1%}".format(mAP))
-        for r in [1, 5, 10]:
-            logger.info("CMC curve, Rank-{:<3}:{:.1%}".format(r, cmc[r - 1]))
+        table = PrettyTable(["task", "mAP", "R1", "R5", "R10"])
+        table.add_row(['Reid', mAP, cmc[0],cmc[4], cmc[9]])
+        table.custom_format["R1"] = lambda f, v: f"{v:.3f}"
+        table.custom_format["R5"] = lambda f, v: f"{v:.3f}"
+        table.custom_format["R10"] = lambda f, v: f"{v:.3f}"
+        table.custom_format["mAP"] = lambda f, v: f"{v:.3f}"
+        logger.info('\n' + str(table))
         logger.info("total inference time: {:.2f}".format(time.time() - t0))
     return cmc, mAP
+
+
 
 def do_inference_multi_targets(cfg,
                  model,
