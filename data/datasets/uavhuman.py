@@ -97,7 +97,7 @@ class UAVHuman(ImageDataset):
         for img_path in img_paths:
             fname = osp.split(img_path)[-1]
             if fname.startswith('D'):
-                continue
+                # continue
                 pid = int(distractor_pid)
             else:
                 pid_part1, pid_part2 = pattern_pid.search(fname).groups()
@@ -115,7 +115,7 @@ class UAVHuman(ImageDataset):
         for img_path in img_paths:
             fname = osp.split(img_path)[-1]
             if fname.startswith('D'):
-                continue
+                # continue
                 pid = int(distractor_pid)
                 camid = int(fname[-13:-8])
             else:

@@ -538,17 +538,17 @@ class build_attr_vit(nn.Module):
             cls_score = self.classifier(feat)
             return cls_score, global_feat, attr_scores
         else:
-<<<<<<< HEAD
-            # return feat, attr_scores if self.neck_feat == 'after' else global_feat,attr_scores
-            if self.neck_feat == 'after':
-                return feat, attr_scores 
-            else:
-                return global_feat,attr_scores
-=======
             if fusion > 0:
                 return x[:, :fusion].mean(1).squeeze()
-            return feat if self.neck_feat == 'after' else global_feat
->>>>>>> 074e81558824aa6e19d986ca0be4a7bbcedfc5ea
+            # return feat if self.neck_feat == 'after' else global_feat
+            # return feat, attr_scores if self.neck_feat == 'after' else global_feat,attr_scores
+            else:
+                if self.neck_feat == 'after':
+                    return feat, attr_scores 
+                else:
+                    return global_feat,attr_scores
+            
+            
 
     def load_param(self, trained_path):
         param_dict = torch.load(trained_path)
