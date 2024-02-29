@@ -531,12 +531,18 @@ class build_attr_vit(nn.Module):
             score = self.attr_head[i](attr_tokens[:, i])
             attr_scores.append(score)
 
+        # import ipdb; ipdb.set_trace() 
+
         if self.training:
             ### original
             cls_score = self.classifier(feat)
             return cls_score, global_feat, attr_scores
         else:
-            return feat if self.neck_feat == 'after' else global_feat
+            # return feat, attr_scores if self.neck_feat == 'after' else global_feat,attr_scores
+            if self.neck_feat == 'after':
+                return feat, attr_scores 
+            else:
+                return global_feat,attr_scores
 
     def load_param(self, trained_path):
         param_dict = torch.load(trained_path)
