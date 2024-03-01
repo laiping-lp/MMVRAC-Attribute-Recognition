@@ -67,7 +67,8 @@ def do_inference(cfg,
             attributes.append(attrs[k])
         with torch.no_grad():
             img = img.to(device)
-            feat, attr_scores  = model(img)
+            feat, attr_scores  = model(img, attr_recognition)
+            feat = feat[:, 0]
             for scores in attr_scores:
                 class_indices = torch.argmax(scores, dim=1)
                 attr_classes.append(class_indices.tolist())
@@ -145,8 +146,11 @@ def do_inference_feat_fusion(cfg,
         with torch.no_grad():
             img = img.to(device)
             # camids = camids.to(device)
-            feat = model(img, fusion=4)
-            evaluator.update((feat, pid, camids))
+            feat = model(img, attr_recognition=True)
+            feat_sync = feat[:, 0]*0.5 + (feat[:, 1] + feat[:, 3])/2*0.5
+            # feat_sync = torch.cat([feat[:, 0], feat[:, 1], feat[:, 3]], dim=1)
+            # feat_sync = (feat[:, 1] + feat[:, 2] + feat[:, 3])/3
+            evaluator.update((feat_sync, pid, camids))
             img_path_list.extend(imgpath)
 
     total_f_time = time.time() - t0

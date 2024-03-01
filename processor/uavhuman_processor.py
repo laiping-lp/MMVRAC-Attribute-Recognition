@@ -15,7 +15,7 @@ import torch.distributed as dist
 from data.build_DG_dataloader import build_reid_test_loader, build_reid_train_loader
 from torch.utils.tensorboard import SummaryWriter
 
-def uavhuman_do_train_with_amp(cfg,
+def attr_vit_do_train_with_amp(cfg,
              model,
              center_criterion,
              train_loader,
@@ -196,7 +196,7 @@ def uavhuman_do_train_with_amp(cfg,
             if 'DG' in cfg.DATASETS.TEST[0]:
                 cmc, mAP = do_inference_multi_targets(cfg, model, num_query, logger)
             else:
-                cmc, mAP = do_inference(cfg, model, val_loader, num_query)
+                cmc, mAP = do_inference(cfg, model, val_loader, num_query, attr_recognition=True)
             tbWriter.add_scalar('val/Rank@1', cmc[0], epoch)
             tbWriter.add_scalar('val/mAP', mAP, epoch)
             torch.cuda.empty_cache()

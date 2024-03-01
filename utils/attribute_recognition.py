@@ -5,7 +5,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 
-def Attribute_Recognition(cfg,attributes,attr_classes,val_loader,gen_attr_reslut = False):
+def Attribute_Recognition(cfg,attributes,attr_classes,data_list,gen_attr_reslut = False):
     print("=> Attribute Recognition")
     num_attributes = 7  # 假设每个数据有num_attributes个属性
     accuracy_per_attribute = [0] * num_attributes  # 初始化每个属性的准确率列表
@@ -13,9 +13,6 @@ def Attribute_Recognition(cfg,attributes,attr_classes,val_loader,gen_attr_reslut
     attr_re_path = [[] for _ in range(7)]
     attr_label = [[] for _ in range(7)]
     attr_pre_label = [[] for _ in range(7)]
-    data_list = []
-    for batch in val_loader:
-        data_list.append(batch)
     for i in range(len(attributes)):
         informations = data_list[i // 7]
         for j in range(len(attributes[i])):
