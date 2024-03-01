@@ -18,6 +18,7 @@ from loss.build_loss import build_loss
 import loss as Patchloss
 from model.extract_features import extract_features
 import collections
+import yaml
 # import os
 # os.environ['CUDA_LAUNCH_BLOCKING'] = '1' # 下面老是报错 shape 不一致
 
@@ -66,6 +67,8 @@ if __name__ == '__main__':
             config_str = "\n" + cf.read()
             # logger.info(config_str)
     # logger.info("Running with config:\n{}".format(cfg))
+    with open(f'{cfg.LOG_ROOT}/{cfg.LOG_NAME}/log.yml', 'w') as file:
+        yaml.dump(cfg, file)
 
     if cfg.MODEL.DIST_TRAIN:
         torch.distributed.init_process_group(backend='nccl', init_method='env://')
