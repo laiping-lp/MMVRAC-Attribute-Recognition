@@ -51,6 +51,7 @@ def do_inference(cfg,
     
     attributes = []
     attr_classes = []
+    data_list = []
     for n_iter, informations in enumerate(val_loader):
         img = informations['images']
         pid = informations['targets']
@@ -60,7 +61,7 @@ def do_inference(cfg,
         # attributes
         attrs = informations['others']
         
-        
+        data_list.append(informations)
         for k in attrs.keys():
             attrs[k] = attrs[k].to(device)
             attributes.append(attrs[k])
@@ -81,7 +82,7 @@ def do_inference(cfg,
 
     if attr_recognition:
         # if want to get attribute recognition wrong result, set "gen_attr_result = True"
-        accuracy_per_attribute = Attribute_Recognition(cfg,attributes,attr_classes,val_loader,gen_attr_reslut = False)
+        accuracy_per_attribute = Attribute_Recognition(cfg,attributes,attr_classes,data_list,gen_attr_reslut = False)
         table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
         formatted_accuracy = ["{:.3f}".format(accuracy) for accuracy in accuracy_per_attribute]
         table.add_row(["Attribute Recognition"] + formatted_accuracy)

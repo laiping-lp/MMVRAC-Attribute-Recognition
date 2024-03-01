@@ -763,8 +763,18 @@ def vit_base_patch16_224_TransReID(img_size=(256, 128), stride_size=16, drop_rat
     return model
 
 def attr_vit_base_patch16_224_TransReID(img_size=(256, 128), stride_size=16, drop_rate=0.0, attn_drop_rate=0.0, drop_path_rate=0.1, norm='LN', **kwargs):
+    print("attr_vit_base_patch16_224_TransReID")
     model = AttrViT(
         img_size=img_size, patch_size=16, stride_size=stride_size, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=True,\
+        drop_path_rate=drop_path_rate, drop_rate=drop_rate, attn_drop_rate=attn_drop_rate,
+        norm_name=norm, **kwargs)
+
+    return model
+
+def attr_vit_large_patch16_224_TransReID(img_size=(256, 128), stride_size=16, drop_rate=0.0, attn_drop_rate=0.0, drop_path_rate=0.1, norm='LN', **kwargs):
+    print("attr_vit_large_patch16_224_TransReID")
+    model = AttrViT(
+        img_size=img_size, patch_size=16, stride_size=stride_size, embed_dim=1024, depth=24, num_heads=16, mlp_ratio=4, qkv_bias=True,\
         drop_path_rate=drop_path_rate, drop_rate=drop_rate, attn_drop_rate=attn_drop_rate,
         norm_name=norm, **kwargs)
 

@@ -5,6 +5,7 @@ from data.build_DG_dataloader import build_reid_test_loader
 from model import make_model
 from processor.inf_processor import do_inference, do_inference_multi_targets
 from utils.logger import setup_logger
+import yaml
 
 
 if __name__ == "__main__":
@@ -37,6 +38,8 @@ if __name__ == "__main__":
             config_str = "\n" + cf.read()
             # logger.info(config_str)
     # logger.info("Running with config:\n{}".format(cfg))
+    # with open(f'{cfg.LOG_ROOT}/{cfg.LOG_NAME}/log.yaml', 'w') as file:
+    #     yaml.dump(cfg, file)
 
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID
 
@@ -53,10 +56,10 @@ if __name__ == "__main__":
         # no reranking (original result)
         logger.info("=== original result ===")
         do_inference(cfg, model, val_loader, num_query, query=query, gallery=gallery,attr_recognition = cfg.TEST.ATTRIBUTE_RECOGNITION)
-        # with query aggregate
-        logger.info("=== query aggregate ===")
-        do_inference(cfg,model,val_loader,num_query,query=query,gallery=gallery,query_aggeregate=cfg.TEST.QUERY_AGGREGATE)
-        # with reranking
-        logger.info("=== reranking result ===")
-        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING, query=query, gallery=gallery)
+        # # with query aggregate
+        # logger.info("=== query aggregate ===")
+        # do_inference(cfg,model,val_loader,num_query,query=query,gallery=gallery,query_aggeregate=cfg.TEST.QUERY_AGGREGATE)
+        # # with reranking
+        # logger.info("=== reranking result ===")
+        # do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING, query=query, gallery=gallery)
         
