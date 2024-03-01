@@ -59,6 +59,7 @@ TEST:
   QUERY_AGGREGATE: False
   NECK_FEAT: 'before'
   FEAT_NORM: True
+  ATTRIBUTE_RECOGNITION: False
 
 LOG_ROOT: '/data4/liyuke/exp/' # root of log file
 TB_LOG_ROOT: './tb_log/'

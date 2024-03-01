@@ -539,7 +539,7 @@ class build_attr_vit(nn.Module):
             return cls_score, global_feat, attr_scores
         else:
             if attr_recognition:
-                return x[:, :8], attr_scores
+                return x, attr_scores
             return feat if self.neck_feat == 'after' else global_feat
 
     def load_param(self, trained_path):
