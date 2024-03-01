@@ -1,7 +1,7 @@
 import logging
 import os
 import random
-from model.backbones.vit_pytorch import TransReID, attr_vit_base_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, resize_pos_embed, vit_base_patch32_224_TransReID, vit_large_patch16_224_TransReID
+from model.backbones.vit_pytorch import TransReID, attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID,deit_tiny_patch16_224_TransReID, resize_pos_embed, vit_base_patch32_224_TransReID, vit_large_patch16_224_TransReID
 import torch
 import torch.nn as nn
 
@@ -21,6 +21,8 @@ __factory_T_type = {
     'deit_tiny_patch16_224_TransReID': deit_tiny_patch16_224_TransReID,
     'swin_base_patch4_window7_224': swin_base_patch4_window7_224,
     'swin_small_patch4_window7_224': swin_small_patch4_window7_224,
+    "attr_vit_base_patch16_224_TransReID":attr_vit_base_patch16_224_TransReID, 
+    "attr_vit_large_patch16_224_TransReID":attr_vit_large_patch16_224_TransReID,
 }
 
 def weights_init_kaiming(m):
@@ -351,6 +353,7 @@ in_plane_dict = {
     'vit_small_patch16_224_prompt_vit': 768,
     'deit_small_patch16_224_prompt_vit': 384,
     'deit_tiny_patch16_224_prompt_vit': 192,
+    'attr_vit_large_patch16_224_TransReID':1024,
 }
 
 class build_vit(nn.Module):
@@ -482,7 +485,7 @@ class build_attr_vit(nn.Module):
         self.num_classes = num_classes
 
         if self.pretrain_choice == 'imagenet':
-            self.base = attr_vit_base_patch16_224_TransReID\
+            self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
                 (img_size=cfg.INPUT.SIZE_TRAIN,
                 stride_size=cfg.MODEL.STRIDE_SIZE,
                 drop_path_rate=cfg.MODEL.DROP_PATH,
