@@ -362,19 +362,23 @@ class R1_mAP_eval_ensemble():
             g_pids = np.asarray(self.pids[self.num_query:])
 
             g_camids = np.asarray(self.camids[self.num_query:])
+            
             if self.reranking:
                 distmat = re_ranking(qf, gf, k1=4, k2=4, lambda_value=0.45)
                 # distmat = re_ranking(qf, gf, k1=50, k2=15, lambda_value=0.3)
             else:
                 # print('=> Computing DistMat with euclidean_distance')
                 distmat = euclidean_dist(qf, gf)
-            if self.query_aggregate:
-                distmat = query_aggregate(distmat, q_pids)
                 
             ##### key operation of ensemble
             distmats.append(distmat)
         ##### key operation of ensemble 
         distmat = np.mean(distmats, axis=0)
+        # distmat = 0.9*distmats[0] + 0.1*distmats[1]
+        
+        
+        if self.query_aggregate:
+            distmat = query_aggregate(distmat, q_pids)
             
         cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result)
 

@@ -3,7 +3,7 @@ from config import cfg
 import argparse
 from data.build_DG_dataloader import build_reid_test_loader
 from model import make_model
-from model.backbones.vit_pytorch import attr_vit_large_patch16_224_TransReID, vit_large_patch16_224_TransReID
+from model.backbones.vit_pytorch import attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID, vit_large_patch16_224_TransReID
 from processor.inf_processor import do_inference, do_inference_ensemble, do_inference_multi_targets
 from utils.logger import setup_logger
 
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID
 
-    model_vitb = make_model(cfg, cfg.MODEL.NAME, 0)
+    model_vitb = attr_vit_base_patch16_224_TransReID(stride_size=12)
     model_vitl = attr_vit_large_patch16_224_TransReID(stride_size=16)
     if cfg.TEST.WEIGHT:
         model_vitb.load_param(cfg.TEST.WEIGHT)

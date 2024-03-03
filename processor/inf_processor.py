@@ -174,10 +174,7 @@ def do_inference_ensemble(cfg,
                         class_indices = torch.argmax(scores, dim=1)
                         attr_classes.append(class_indices.tolist())
                 else:
-                    if name == "vit_l":
-                        feat = outputs[:, 0]
-                    else:
-                        feat = outputs
+                    feat = outputs[:, 0]
                 feats.append(feat)
                 
             evaluator.update((feats, pid, camids))
