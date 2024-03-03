@@ -303,14 +303,77 @@ class R1_mAP_eval():
         if self.reranking:
             distmat = re_ranking(qf, gf, k1=4, k2=4, lambda_value=0.45)
             # distmat = re_ranking(qf, gf, k1=50, k2=15, lambda_value=0.3)
-            if self.query_aggregate:
-                distmat = query_aggregate(distmat, q_pids)
-
         else:
             # print('=> Computing DistMat with euclidean_distance')
             distmat = euclidean_dist(qf, gf)
+        if self.query_aggregate:
+            distmat = query_aggregate(distmat, q_pids)
+        cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result)
+
+        return cmc, mAP, distmat, self.pids, self.camids, qf, gf
+    
+    
+
+class R1_mAP_eval_ensemble():
+    def __init__(self, num_query, max_rank=50,  feat_norm=True, reranking=False, query_aggregate=False, feature_aggregate=False, query=None, gallery=None, log_path=None,gen_result=False, num_models=1):
+        super(R1_mAP_eval_ensemble, self).__init__()
+        self.num_query = num_query
+        self.max_rank = max_rank
+        self.feat_norm = feat_norm
+        self.query = query
+        self.gallery = gallery
+        self.log_path = log_path
+        if feat_norm:
+            print("The test feature is normalized")
+        self.reranking = reranking
+        self.query_aggregate = query_aggregate
+        self.feature_aggregate = feature_aggregate
+        self.gen_result = gen_result
+        self.num_models = num_models
+
+    def reset(self):
+        self.feats = [[] for _ in self.num_models]
+        self.pids = []
+        self.camids = []
+
+    def update(self, output):  # called once for each batch
+        feats, pid, camid = output
+        for i, feat in enumerate(feats):
+            self.feats[i].append(feat.cpu())
+        self.pids.extend(np.asarray(pid))
+        self.camids.extend(np.asarray(camid))
+
+    def compute(self):  # called after each epoch
+        feats = torch.cat(self.feats, dim=1)
+        distmats = []
+        for feat in feats:
+            if self.feat_norm:
+                feat = torch.nn.functional.normalize(feat, dim=1, p=2)  # along channel
+            # query
+            qf = feat[:self.num_query]
+            if self.feature_aggregate:
+                qf = feat_aggregate(qf, q_pids)
+            q_pids = np.asarray(self.pids[:self.num_query])
+            q_camids = np.asarray(self.camids[:self.num_query])
+            # gallery
+            gf = feat[self.num_query:]
+            g_pids = np.asarray(self.pids[self.num_query:])
+
+            g_camids = np.asarray(self.camids[self.num_query:])
+            if self.reranking:
+                distmat = re_ranking(qf, gf, k1=4, k2=4, lambda_value=0.45)
+                # distmat = re_ranking(qf, gf, k1=50, k2=15, lambda_value=0.3)
+            else:
+                # print('=> Computing DistMat with euclidean_distance')
+                distmat = euclidean_dist(qf, gf)
             if self.query_aggregate:
                 distmat = query_aggregate(distmat, q_pids)
+                
+            ##### key operation of ensemble
+            distmats.append(distmat)
+            
+        distmat = distmats.mean(0)
+            
         cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result)
 
         return cmc, mAP, distmat, self.pids, self.camids, qf, gf
