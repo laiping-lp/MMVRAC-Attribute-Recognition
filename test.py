@@ -48,4 +48,4 @@ if __name__ == "__main__":
 
     for testname in cfg.DATASETS.TEST:
         _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
-        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
+        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING, query_aggeregate=cfg.TEST.QUERY_AGGREGATE)

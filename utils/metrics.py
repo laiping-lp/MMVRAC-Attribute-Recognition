@@ -332,7 +332,7 @@ class R1_mAP_eval_ensemble():
         self.num_models = num_models
 
     def reset(self):
-        self.feats = [[] for _ in self.num_models]
+        self.feats = [[] for _ in range(self.num_models)]
         self.pids = []
         self.camids = []
 
@@ -344,7 +344,9 @@ class R1_mAP_eval_ensemble():
         self.camids.extend(np.asarray(camid))
 
     def compute(self):  # called after each epoch
-        feats = torch.cat(self.feats, dim=1)
+        # import ipdb
+        # ipdb.set_trace()
+        feats = [torch.cat(feat, dim=0) for feat in self.feats]
         distmats = []
         for feat in feats:
             if self.feat_norm:
@@ -371,8 +373,8 @@ class R1_mAP_eval_ensemble():
                 
             ##### key operation of ensemble
             distmats.append(distmat)
-            
-        distmat = distmats.mean(0)
+        ##### key operation of ensemble 
+        distmat = np.mean(distmats, axis=0)
             
         cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result)
 

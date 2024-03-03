@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from data.build_DG_dataloader import build_reid_test_loader
 
-from utils.metrics import R1_mAP_eval
+from utils.metrics import R1_mAP_eval, R1_mAP_eval_ensemble
 from utils.attribute_recognition import Attribute_Recognition
 
 from prettytable import PrettyTable
@@ -119,7 +119,7 @@ def do_inference_ensemble(cfg,
                  query=None,
                  gallery=None,
                  gen_result=False,
-                 query_aggeregate=False,
+                 query_aggregate=False,
                  attr_recognition=False,
                 ):
     device = "cuda"
@@ -128,7 +128,7 @@ def do_inference_ensemble(cfg,
         logger.info("Enter inferencing")
 
     log_path = cfg.LOG_ROOT + cfg.LOG_NAME
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking = reranking, query = query, gallery = gallery, log_path = log_path, gen_result=gen_result, query_aggregate=query_aggeregate)
+    evaluator = R1_mAP_eval_ensemble(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking = reranking, query = query, gallery = gallery, log_path = log_path, gen_result=gen_result, query_aggregate=query_aggregate, num_models=2)
 
     evaluator.reset()
 
@@ -136,9 +136,11 @@ def do_inference_ensemble(cfg,
         if torch.cuda.device_count() > 1:
             print('Using {} GPUs for inference'.format(torch.cuda.device_count()))
             model = nn.DataParallel(model)
-        model.to(device)
+        for model in models.values():
+            model.to(device)
 
-    models = [m.eval() for m in models]
+    for k in models.keys():
+        models[k] = models[k].eval()
     img_path_list = []
     torch.cuda.synchronize()
     t0 = time.time()
@@ -163,8 +165,8 @@ def do_inference_ensemble(cfg,
         with torch.no_grad():
             img = img.to(device)
             feats = []
-            for mod in models:
-                outputs  = mod(img, attr_recognition)
+            for name in models.keys():
+                outputs  = models[name](img)
                 if attr_recognition:
                     feat, attr_scores = outputs
                     feat = feat[:, 0]
@@ -172,7 +174,10 @@ def do_inference_ensemble(cfg,
                         class_indices = torch.argmax(scores, dim=1)
                         attr_classes.append(class_indices.tolist())
                 else:
-                    feat = outputs
+                    if name == "vit_l":
+                        feat = outputs[:, 0]
+                    else:
+                        feat = outputs
                 feats.append(feat)
                 
             evaluator.update((feats, pid, camids))
