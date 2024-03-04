@@ -565,6 +565,8 @@ class build_attr_vit(nn.Module):
             # if 'bottleneck' in i:
             #     continue
             if i in self.state_dict().keys():
+                if 'pos_embed' in i and param_dict[i].shape != self.base.pos_embed.shape:
+                    param_dict[i] = self.base.resize_pos_embed(param_dict[i], self.base.pos_embed, self.base.patch_embed.num_y, self.base.patch_embed.num_x)
                 self.state_dict()[i].copy_(param_dict[i])
                 count += 1
         print('Loading trained model from {}\n Load {}/{} layers'.format(trained_path, count, len(self.state_dict())))

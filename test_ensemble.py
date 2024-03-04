@@ -3,7 +3,8 @@ from config import cfg
 import argparse
 from data.build_DG_dataloader import build_reid_test_loader
 from model import make_model
-from processor.inf_processor import do_inference, do_inference_multi_targets
+from model.backbones.vit_pytorch import attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID, vit_large_patch16_224_TransReID
+from processor.inf_processor import do_inference, do_inference_ensemble, do_inference_multi_targets
 from utils.logger import setup_logger
 
 
@@ -40,12 +41,19 @@ if __name__ == "__main__":
 
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID
 
-    model = make_model(cfg, cfg.MODEL.NAME, 0)
+    model_vitb = attr_vit_base_patch16_224_TransReID(stride_size=12)
+    model_vitl = attr_vit_large_patch16_224_TransReID(stride_size=16)
     if cfg.TEST.WEIGHT:
-        model.load_param(cfg.TEST.WEIGHT)
+        model_vitb.load_param(cfg.TEST.WEIGHT)
     else:
         print("==== random param ====")
+    model_vitl.load_param("/data3/laiping/exp/uavhuman_humanbench_vit_large_attr/attr_vit_best.pth")
+    
+    models = {
+        "vit_b": model_vitb,
+        "vit_l": model_vitl
+        }
 
     for testname in cfg.DATASETS.TEST:
         _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
-        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING, query_aggeregate=cfg.TEST.QUERY_AGGREGATE)
+        do_inference_ensemble(cfg, models, val_loader, num_query, reranking=cfg.TEST.RE_RANKING, query_aggregate=cfg.TEST.QUERY_AGGREGATE)

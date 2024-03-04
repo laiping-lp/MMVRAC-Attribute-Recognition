@@ -7,7 +7,7 @@ MODEL:
   NAME: 'vit' # local_attention_vit, mask_vit, mae, DG_ssl_vit, color_vit, rotate_vit, resnet50, ibnnet50b, vit, distill_vit, prompt_vit, mix_vit, mem_vit, mem_tri_vit, mix_resnet, mix_ibnnet50a, mix_ibnnet50b
   NO_MARGIN: True
   DEVICE_ID: ('8')
-  TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID' # vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID' # vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID
   STRIDE_SIZE: 12
   DROP_PATH: 0.1 ###### avoid overfitting
   # FREEZE_PATCH_EMBED: True
