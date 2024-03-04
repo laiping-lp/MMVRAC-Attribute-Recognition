@@ -84,7 +84,7 @@ def do_inference(cfg,
         # if want to get attribute recognition wrong result, set "gen_attr_result = True"
         accuracy_per_attribute = Attribute_Recognition(cfg,attributes,attr_classes,data_list,gen_attr_reslut = False)
         table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
-        formatted_accuracy = ["{:.3f}".format(accuracy) for accuracy in accuracy_per_attribute]
+        formatted_accuracy = ["{:.2%}".format(accuracy) for accuracy in accuracy_per_attribute]
         table.add_row(["Attribute Recognition"] + formatted_accuracy)
         logger.info('\n' + str(table))
 
@@ -101,13 +101,81 @@ def do_inference(cfg,
         logger.info("Validation Results ")
         table = PrettyTable(["task", "mAP", "R1", "R5", "R10"])
         table.add_row(['Reid', mAP, cmc[0],cmc[4], cmc[9]])
-        table.custom_format["R1"] = lambda f, v: f"{v:.3f}"
-        table.custom_format["R5"] = lambda f, v: f"{v:.3f}"
-        table.custom_format["R10"] = lambda f, v: f"{v:.3f}"
-        table.custom_format["mAP"] = lambda f, v: f"{v:.3f}"
+        table.custom_format["R1"] = lambda f, v: f"{v:.2%}"
+        table.custom_format["R5"] = lambda f, v: f"{v:.2%}"
+        table.custom_format["R10"] = lambda f, v: f"{v:.2%}"
+        table.custom_format["mAP"] = lambda f, v: f"{v:.2%}"
         logger.info('\n' + str(table))
         logger.info("total inference time: {:.2f}".format(time.time() - t0))
     return cmc, mAP
+
+def do_inference_only_attr(cfg,
+                 model,
+                 val_loader,
+                 iflog=True,
+                 attr_recognition=True,
+                ):
+    device = "cuda"
+    if iflog:
+        logger = logging.getLogger("reid.test")
+        logger.info("Enter inferencing")
+
+    log_path = cfg.LOG_ROOT + cfg.LOG_NAME
+
+    if device:
+        if torch.cuda.device_count() > 1:
+            print('Using {} GPUs for inference'.format(torch.cuda.device_count()))
+            model = nn.DataParallel(model)
+        model.to(device)
+
+    model.eval()
+    torch.cuda.synchronize()
+    t0 = time.time()
+    bs = cfg.SOLVER.IMS_PER_BATCH # altered by lyk
+    
+    attributes = []
+    attr_classes = []
+    data_list = []
+    for n_iter, informations in enumerate(val_loader):
+        img = informations['images']
+        attrs = informations['others']
+        
+        data_list.append(informations)
+        for k in attrs.keys():
+            attrs[k] = attrs[k].to(device)
+            attributes.append(attrs[k])
+        with torch.no_grad():
+            img = img.to(device)
+            outputs  = model(img, attr_recognition)
+            if attr_recognition:
+                feat, attr_scores = outputs
+                feat = feat[:, 0]
+                for scores in attr_scores:
+                    class_indices = torch.argmax(scores, dim=1)
+                    attr_classes.append(class_indices.tolist())
+            else:
+                feat = outputs
+    
+    total_f_time = time.time() - t0
+    # if want to get attribute recognition wrong result, set "gen_attr_result = True"
+    accuracy_per_attribute = Attribute_Recognition(cfg,attributes,attr_classes,data_list,gen_attr_reslut = False)
+    logger.info("Validation Results ")
+    table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
+    formatted_accuracy_per_attribute = ["{:.2%}".format(accuracy) for accuracy in accuracy_per_attribute]
+    table.add_row(["Attribute Recognition"] + formatted_accuracy_per_attribute)
+    logger.info('\n' + str(table))
+    logger.info("=====attribute recognition accuracy: {:.2%}=====".format(sum(accuracy_per_attribute)))
+
+    
+    single_f_time = total_f_time / (len(val_loader) * img.shape[0])
+    num_imgs_per_sec = (len(val_loader) * img.shape[0]) / total_f_time
+    if iflog:
+        logger.info("Total feature time: {:.2f}s".format(total_f_time))
+        logger.info("single feature time: {:.5f}s".format(single_f_time))
+        logger.info("number of images per sec: {:.2f}img/s".format(num_imgs_per_sec))
+        logger.info("total inference time: {:.2f}".format(time.time() - t0))
+
+    return accuracy_per_attribute
 
 
 def do_inference_feat_fusion(cfg,

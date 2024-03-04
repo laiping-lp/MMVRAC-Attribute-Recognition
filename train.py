@@ -9,8 +9,10 @@ import argparse
 from config import cfg
 from processor.uavhuman_processor import attr_vit_do_train_with_amp
 from processor.ori_vit_processor_with_amp import ori_vit_do_train_with_amp
+from processor.uavhuman_processor_attr_only import only_attribute_recognition_vit_do_train_with_amp
 from utils.logger import setup_logger
 from data.build_DG_dataloader import build_reid_train_loader, build_reid_test_loader
+# from model.make_model_only_attr import make_model
 from model import make_model
 from solver import make_optimizer
 from solver.scheduler_factory import create_scheduler
@@ -95,6 +97,7 @@ if __name__ == '__main__':
 
     # ori_vit_do_train_with_amp(
     if cfg.MODEL.NAME == "vit":
+        print("==========> vit!")
         ori_vit_do_train_with_amp(
             cfg,
             model,
@@ -108,8 +111,26 @@ if __name__ == '__main__':
             num_query, args.local_rank,
             num_pids = num_pids,
         )
-    elif "attr_vit" in cfg.MODEL.NAME:
+    elif "attr_vit" == cfg.MODEL.NAME:
+        print("==========> attr_vit!")
+        # if want to get best attr model ,set attr_recognition = True
         attr_vit_do_train_with_amp(
+            cfg,
+            model,
+            center_criterion,
+            train_loader,
+            val_loader,
+            optimizer,
+            optimizer_center,
+            scheduler,
+            loss_func,
+            num_query, args.local_rank,
+            num_pids = num_pids,
+            attr_recognition = True,
+        )
+    elif "only_attribute_recognition" == cfg.MODEL.NAME:
+        print("==========> only_attribute_recognition!")
+        only_attribute_recognition_vit_do_train_with_amp(
             cfg,
             model,
             center_criterion,
