@@ -33,7 +33,7 @@ def do_inference(cfg,
         logger.info("Enter inferencing")
 
     log_path = cfg.LOG_ROOT + cfg.LOG_NAME
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking = reranking, query = query, gallery = gallery, log_path = log_path, gen_result=gen_result, query_aggregate=query_aggeregate)
+    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking = reranking, query = query, gallery = gallery, log_path = log_path, gen_result=gen_result, query_aggregate=query_aggregate)
 
     evaluator.reset()
 

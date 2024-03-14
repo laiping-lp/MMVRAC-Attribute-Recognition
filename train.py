@@ -91,6 +91,11 @@ if __name__ == '__main__':
     loss_func, center_criterion = build_loss(cfg, num_classes=num_classes)
 
     model = make_model(cfg, model_name, num_classes)
+    if cfg.MODEL.FREEZE_PATCH_EMBED and 'resnet' not in cfg.MODEL.NAME: # trick from moco v3
+        model.base.patch_embed.proj.weight.requires_grad = False
+        model.base.patch_embed.proj.bias.requires_grad = False
+        print("====== freeze patch_embed for stability ======")
+
     optimizer, optimizer_center = make_optimizer(cfg, model, center_criterion)
 
     scheduler = create_scheduler(cfg, optimizer)
