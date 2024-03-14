@@ -233,7 +233,7 @@ def ori_vit_do_train_with_amp(cfg,
             if 'DG' in cfg.DATASETS.TEST[0]:
                 cmc, mAP = do_inference_multi_targets(cfg, model, num_query, logger)
             else:
-                cmc, mAP = do_inference(cfg, model, val_loader, num_query, attr_recognition=True)
+                cmc, mAP = do_inference(cfg, model, val_loader, num_query)
             tbWriter.add_scalar('val/Rank@1', cmc[0], epoch)
             tbWriter.add_scalar('val/mAP', mAP, epoch)
             torch.cuda.empty_cache()
@@ -260,4 +260,4 @@ def ori_vit_do_train_with_amp(cfg,
     else:
         for testname in cfg.DATASETS.TEST:
             _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
-            do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
+            do_inference(cfg, model, val_loader, num_query, query_aggregate=cfg.TEST.QUERY_AGGREGATE, reranking=cfg.TEST.RE_RANKING)

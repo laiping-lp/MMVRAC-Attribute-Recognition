@@ -199,7 +199,7 @@ def attr_vit_do_train_with_amp(cfg,
             if 'DG' in cfg.DATASETS.TEST[0]:
                 cmc, mAP = do_inference_multi_targets(cfg, model, num_query, logger)
             else:
-                cmc, mAP = do_inference(cfg, model, val_loader, num_query)
+                cmc, mAP = do_inference(cfg, model, val_loader, num_query, attr_recognition=True)
             tbWriter.add_scalar('val/Rank@1', cmc[0], epoch)
             tbWriter.add_scalar('val/mAP', mAP, epoch)
             torch.cuda.empty_cache()
@@ -214,22 +214,22 @@ def attr_vit_do_train_with_amp(cfg,
                 else:
                     torch.save(model.state_dict(),
                             os.path.join(log_path, cfg.MODEL.NAME + '_best.pth'))
-        # The best model for attribute recognition is retained while training reid
-        if attr_recognition:
-            if epoch % 1 == 0 and epoch <= 25:
-                accuracy_per_attribute = do_inference_only_attr(cfg, model, val_loader, num_query, attr_recognition=True)
-                if best_attr < sum(accuracy_per_attribute):
-                    best_attr = sum(accuracy_per_attribute)
-                    best_attr_index = epoch
-                    logger.info("=====best epoch: {}=====".format(best_attr_index))
-                    logger.info("=====best accuracy: {:.2%}=====".format(best_attr))
-                    if cfg.MODEL.DIST_TRAIN:
-                        if dist.get_rank() == 0:
-                            torch.save(model.state_dict(),
-                                    os.path.join(log_path,'attr_best.pth'))
-                    else:
-                        torch.save(model.state_dict(),
-                                os.path.join(log_path, 'attr_best.pth'))
+        # # The best model for attribute recognition is retained while training reid
+        # if attr_recognition:
+        #     if epoch % 1 == 0 and epoch <= 25:
+        #         accuracy_per_attribute = do_inference_only_attr(cfg, model, val_loader, num_query, attr_recognition=True)
+        #         if best_attr < sum(accuracy_per_attribute):
+        #             best_attr = sum(accuracy_per_attribute)
+        #             best_attr_index = epoch
+        #             logger.info("=====best epoch: {}=====".format(best_attr_index))
+        #             logger.info("=====best accuracy: {:.2%}=====".format(best_attr))
+        #             if cfg.MODEL.DIST_TRAIN:
+        #                 if dist.get_rank() == 0:
+        #                     torch.save(model.state_dict(),
+        #                             os.path.join(log_path,'attr_best.pth'))
+        #             else:
+        #                 torch.save(model.state_dict(),
+        #                         os.path.join(log_path, 'attr_best.pth'))
         torch.cuda.empty_cache()
 
     # final evaluation
@@ -242,4 +242,4 @@ def attr_vit_do_train_with_amp(cfg,
     else:
         for testname in cfg.DATASETS.TEST:
             _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
-            do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
+            do_inference(cfg, model, val_loader, num_query, query_aggregate=cfg.TEST.QUERY_AGGREGATE, reranking=cfg.TEST.RE_RANKING)
