@@ -24,7 +24,7 @@ def do_inference(cfg,
                  query=None,
                  gallery=None,
                  gen_result=False,
-                 query_aggeregate=False,
+                 query_aggregate=False,
                  attr_recognition=False,
                 ):
     device = "cuda"
