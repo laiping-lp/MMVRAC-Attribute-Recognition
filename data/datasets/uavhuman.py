@@ -129,8 +129,12 @@ class UAVHuman(ImageDataset):
 
                 # attributes infos
                 gender = int(pattern_gender.search(fname).groups()[0][0]) - 1 # 0: n/a; 1: male; 2: female
-                backpack = int(pattern_backpack.search(fname).groups()[0][0]) # 0: n/a; 1: red; 2: black; 3: green; 4: yellow; 5: n/a
+                backpack = int(pattern_backpack.search(fname).groups()[0][0])
+                if backpack == 5:
+                    backpack = 0 # 0: n/a; 1: red; 2: black; 3: green; 4: yellow; 5: n/a
                 hat = int(pattern_hat.search(fname).groups()[0][0]) # 0: n/a; 1: red; 2: black; 3: yellow; 4: white; 5: n/a
+                if hat == 5:
+                    hat = 0
                 upper_cloth = pattern_upper.search(fname).groups()[0]
                 upper_color = int(upper_cloth[:2]) # 0: n/a; 1: red; 2: black; 3: blue; 4: green; 5: multicolor; 6: grey; 7: white; 8: yellow; 9: dark brown; 10: purple; 11: pink
                 upper_style = int(upper_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt

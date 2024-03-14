@@ -1,7 +1,7 @@
 import logging
 import os
 import random
-from model.backbones.vit_pytorch import TransReID, attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID,deit_tiny_patch16_224_TransReID, resize_pos_embed, vit_base_patch32_224_TransReID, vit_large_patch16_224_TransReID
+from model.backbones.vit_pytorch import TransReID, only_attr_vit_base_patch16_224_TransReID,only_attr_vit_large_patch16_224_TransReID,attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID,deit_tiny_patch16_224_TransReID, resize_pos_embed, vit_base_patch32_224_TransReID, vit_large_patch16_224_TransReID
 import torch
 import torch.nn as nn
 
@@ -23,6 +23,8 @@ __factory_T_type = {
     'swin_small_patch4_window7_224': swin_small_patch4_window7_224,
     "attr_vit_base_patch16_224_TransReID":attr_vit_base_patch16_224_TransReID, 
     "attr_vit_large_patch16_224_TransReID":attr_vit_large_patch16_224_TransReID,
+    "only_attr_vit_base_patch16_224_TransReID":only_attr_vit_base_patch16_224_TransReID,
+    "only_attr_vit_large_patch16_224_TransReID":only_attr_vit_large_patch16_224_TransReID,
 }
 
 def weights_init_kaiming(m):
@@ -106,9 +108,18 @@ class Backbone(nn.Module):
         elif model_name == 'ibnnet101a':
             self.base = resnet101_ibn_a(pretrained=True)
         else:
+            print(model_path_base)
+            model_path = model_path_base
             print('unsupported backbone! but got {}'.format(model_name))
 
         if pretrain_choice == 'imagenet' and 'ibn' not in model_name:
+            print(model_path)
+            self.base = swin_base_patch4_window7_224\
+                (img_size=cfg.INPUT.SIZE_TRAIN,
+                stride_size=cfg.MODEL.STRIDE_SIZE,
+                drop_path_rate=cfg.MODEL.DROP_PATH,
+                drop_rate= cfg.MODEL.DROP_OUT,
+                attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
             self.base.load_param(model_path)
             print('Loading pretrained ImageNet model......from {}'.format(model_path))
 
@@ -513,8 +524,8 @@ class build_attr_vit(nn.Module):
 
         self.attr_head = nn.ModuleList([
             nn.Linear(self.in_planes, 2, bias=False), # gender
-            nn.Linear(self.in_planes, 6, bias=False), # backpack
-            nn.Linear(self.in_planes, 6, bias=False), # hat
+            nn.Linear(self.in_planes, 5, bias=False), # backpack
+            nn.Linear(self.in_planes, 5, bias=False), # hat
             nn.Linear(self.in_planes, 12, bias=False), # upper cloth color 
             nn.Linear(self.in_planes, 4, bias=False), # upper cloth style 
             nn.Linear(self.in_planes, 12, bias=False), # lower cloth color 
@@ -617,8 +628,8 @@ class build_attr_vit_V2(nn.Module):
 
         self.attr_head = nn.ModuleList([
             nn.Linear(self.in_planes, 2, bias=False), # gender
-            nn.Linear(self.in_planes, 6, bias=False), # backpack
-            nn.Linear(self.in_planes, 6, bias=False), # hat
+            nn.Linear(self.in_planes, 5, bias=False), # backpack
+            nn.Linear(self.in_planes, 5, bias=False), # hat
             nn.Linear(self.in_planes, 12, bias=False), # upper cloth color 
             nn.Linear(self.in_planes, 4, bias=False), # upper cloth style 
             nn.Linear(self.in_planes, 12, bias=False), # lower cloth color 
@@ -775,6 +786,108 @@ class build_diffusion_reid(nn.Module):
         logger = logging.getLogger('reid.train')
         logger.info("Number of parameter: %.2fM" % (total/1e6))
 
+class build_only_attr_vit_cls(nn.Module):
+    def __init__(self, num_classes, cfg, factory):
+        super().__init__()
+        self.cfg = cfg
+        model_path_base = cfg.MODEL.PRETRAIN_PATH
+        
+        self.pretrain_choice = cfg.MODEL.PRETRAIN_CHOICE
+        self.cos_layer = cfg.MODEL.COS_LAYER
+        self.neck = cfg.MODEL.NECK
+        self.neck_feat = cfg.TEST.NECK_FEAT
+        if cfg.MODEL.TRANSFORMER_TYPE in in_plane_dict:
+            self.in_planes = in_plane_dict[cfg.MODEL.TRANSFORMER_TYPE]
+        else:
+            print("===== unknown transformer type =====")
+            self.in_planes = 768
+
+        print('using Transformer_type: vit as a backbone')
+
+        self.gap = nn.AdaptiveAvgPool2d(1)
+        # self.num_classes = num_classes
+
+        if self.pretrain_choice == 'imagenet':
+            self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
+                (img_size=cfg.INPUT.SIZE_TRAIN,
+                stride_size=cfg.MODEL.STRIDE_SIZE,
+                drop_path_rate=cfg.MODEL.DROP_PATH,
+                drop_rate= cfg.MODEL.DROP_OUT,
+                attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
+        elif self.pretrain_choice == 'LUP':
+            self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
+                (img_size=cfg.INPUT.SIZE_TRAIN,
+                stride_size=cfg.MODEL.STRIDE_SIZE,
+                drop_path_rate=cfg.MODEL.DROP_PATH,
+                drop_rate= cfg.MODEL.DROP_OUT,
+                attn_drop_rate=cfg.MODEL.ATT_DROP_RATE,
+                stem_conv=True)
+        self.model_path = model_path_base
+        self.base.load_param(self.model_path)
+        print('Loading pretrained model......from {}'.format(self.model_path))
+            
+        #### original one
+        # self.classifier = nn.Linear(self.in_planes, self.num_classes, bias=False)
+        # self.classifier.apply(weights_init_classifier)
+        # self.bottleneck = nn.BatchNorm1d(self.in_planes)
+        # self.bottleneck.bias.requires_grad_(False)
+        # self.bottleneck.apply(weights_init_kaiming)
+
+        self.attr_head = nn.ModuleList([
+            nn.Linear(self.in_planes, 2, bias=False), # gender
+            nn.Linear(self.in_planes, 5, bias=False), # backpack
+            nn.Linear(self.in_planes, 5, bias=False), # hat
+            nn.Linear(self.in_planes, 12, bias=False), # upper cloth color 
+            nn.Linear(self.in_planes, 4, bias=False), # upper cloth style 
+            nn.Linear(self.in_planes, 12, bias=False), # lower cloth color 
+            nn.Linear(self.in_planes, 4, bias=False), # lower cloth style 
+        ])
+        for h in self.attr_head:
+            h.apply(weights_init_classifier)
+
+    def forward(self, x, attr_recognition=False):
+        x = self.base(x) # B, N, C
+        global_feat = x[:, 0] # cls token for global feature
+        attr_tokens = x[:, 1:8]
+
+        # feat = self.bottleneck(global_feat)
+
+        attr_scores = []
+        for i in range(7):
+            score = self.attr_head[i](attr_tokens[:, i])
+            attr_scores.append(score)
+
+        # import ipdb; ipdb.set_trace() 
+
+        if self.training:
+            ### original
+            # cls_score = self.classifier(feat)
+            # return cls_score, global_feat, attr_scores
+            return attr_scores
+        else:
+            if attr_recognition:
+                return x, attr_scores
+            # return feat if self.neck_feat == 'after' else global_feat
+
+    def load_param(self, trained_path):
+        param_dict = torch.load(trained_path)
+        count = 0
+        for i in param_dict:
+            if 'classifier' in i: # drop classifier
+                continue
+            # if 'bottleneck' in i:
+            #     continue
+            if i in self.state_dict().keys():
+                self.state_dict()[i].copy_(param_dict[i])
+                count += 1
+        print('Loading trained model from {}\n Load {}/{} layers'.format(trained_path, count, len(self.state_dict())))
+        
+    def compute_num_params(self):
+        total = sum([param.nelement() for param in self.parameters()])
+        logger = logging.getLogger('reid.train')
+        logger.info("Number of parameter: %.2fM" % (total/1e6))
+ 
+
 def make_model(cfg, modelname, num_class, num_class_domain_wise=None):
     if modelname == 'vit':
         model = build_vit(num_class, cfg, __factory_T_type, num_class_domain_wise)
@@ -785,6 +898,9 @@ def make_model(cfg, modelname, num_class, num_class_domain_wise=None):
     elif modelname == 'attr_vit_only_cls':
         model = build_attr_vit_V2(num_class, cfg, __factory_T_type)
         print('===========building attr_vit===========')
+    elif modelname == "only_attribute_recognition":
+        model = build_only_attr_vit_cls(num_class, cfg, __factory_T_type)
+        print('===========building only_attribute_recognition===========')
     else:
         model = Backbone(modelname, num_class, cfg, num_class_domain_wise)
         print('===========building ResNet===========')

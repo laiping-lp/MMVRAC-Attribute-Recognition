@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 
 def Attribute_Recognition(cfg,attributes,attr_classes,data_list,gen_attr_reslut = False):
     print("=> Attribute Recognition")
-    num_attributes = 7  # 假设每个数据有num_attributes个属性
-    accuracy_per_attribute = [0] * num_attributes  # 初始化每个属性的准确率列表
-    count_per_attribute = [0] * num_attributes  # 初始化每个属性的计数列表
+    num_attributes = 7  # num_class of attributes
+    accuracy_per_attribute = [0] * num_attributes  # init attribute accuracy list
+    count_per_attribute = [0] * num_attributes  # init attributes count list
     attr_re_path = [[] for _ in range(7)]
     attr_label = [[] for _ in range(7)]
     attr_pre_label = [[] for _ in range(7)]
