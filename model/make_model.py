@@ -500,6 +500,7 @@ class build_attr_vit(nn.Module):
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE,
                 stem_conv=True)
         self.model_path = model_path_base
+        # import ipdb; ipdb.set_trace()
         self.base.load_param(self.model_path)
         print('Loading pretrained model......from {}'.format(self.model_path))
             

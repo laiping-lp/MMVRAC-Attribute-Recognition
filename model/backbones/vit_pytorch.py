@@ -692,7 +692,6 @@ class AttrViT(nn.Module):
             if 'head' in k or 'dist' in k or 'pre_logits' in k:
                 continue
             if 'base.' in k: k = k.replace("base.", "")
-            else: continue
             if 'patch_embed.proj.weight' in k and len(v.shape) < 4:
                 # For old models that I trained prior to conv based patchification
                 O, I, H, W = self.patch_embed.proj.weight.shape
