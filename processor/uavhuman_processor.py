@@ -67,6 +67,7 @@ def attr_vit_do_train_with_amp(cfg,
     center_weight = cfg.SOLVER.CENTER_LOSS_WEIGHT
     id_weight = cfg.MODEL.ID_LOSS_WEIGHT
     tri_weight = cfg.MODEL.TRIPLET_LOSS_WEIGHT
+    attr_weight = cfg.MODEL.ATTRIBUTE_LOSS_WEIGHT
 
     best = 0.0
     best_attr = 0.0
@@ -111,7 +112,10 @@ def attr_vit_do_train_with_amp(cfg,
             model.to(device)
             with amp.autocast(enabled=True):
                 loss_tri_hard = torch.tensor(0.,device=device)
-                score, feat, attr_scores = model(img, attrs=attributes)
+                if cfg.MODEL.HAS_ATTRIBUTE_EMBEDDING:
+                    score, feat, attr_scores = model(img, attrs=attributes)
+                else:
+                    score, feat, attr_scores = model(img)
                 # import ipdb; ipdb.set_trace()
                 #### id loss
                 log_probs = nn.LogSoftmax(dim=1)(score)
@@ -155,7 +159,7 @@ def attr_vit_do_train_with_amp(cfg,
                 else:
                     loss_center = torch.tensor(0.0, device=device)
 
-                loss = id_weight * loss_id + tri_weight * loss_tri + center_weight * loss_center + loss_attr
+                loss = id_weight * loss_id + tri_weight * loss_tri + center_weight * loss_center + attr_weight * loss_attr
 
             scaler.scale(loss).backward()
 
@@ -173,10 +177,10 @@ def attr_vit_do_train_with_amp(cfg,
                 acc = (score.max(1)[1] == target).float().mean()
 
             loss_meter.update(loss.item(), bs)
-            loss_id_meter.update(loss_id.item(), bs)
-            loss_tri_meter.update(loss_tri.item(), bs)
+            loss_id_meter.update(id_weight*loss_id.item(), bs)
+            loss_tri_meter.update(tri_weight*loss_tri.item(), bs)
             loss_center_meter.update(center_weight*loss_center.item(), bs)
-            loss_attr_meter.update(loss_attr.item(), bs)
+            loss_attr_meter.update(attr_weight*loss_attr.item(), bs)
             acc_meter.update(acc, 1)
 
             torch.cuda.synchronize()

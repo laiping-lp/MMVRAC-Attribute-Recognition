@@ -561,7 +561,7 @@ class AttrViT(nn.Module):
     """ Transformer-based Object Re-Identification
     """
     def __init__(self, img_size=224, patch_size=16, stride_size=16, in_chans=3, num_classes=0, embed_dim=768, depth=12,
-                 num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0., drop_path_rate=0., hybrid_backbone=None, norm_layer=nn.LayerNorm, **kwargs):
+                 num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0., drop_path_rate=0., hybrid_backbone=None, norm_layer=nn.LayerNorm, has_attr_emb=False, **kwargs):
         super().__init__()
         self.num_classes = num_classes
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
@@ -584,32 +584,17 @@ class AttrViT(nn.Module):
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.attr_tokens = nn.Parameter(torch.zeros(1, 7, embed_dim)) ########
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1 + 7, embed_dim))
-        # attr_embeds = [
-        #     nn.Parameter(torch.zeros(2, 1, embed_dim)), # gender
-        #     nn.Parameter(torch.zeros(5, 1, embed_dim)), # backpack
-        #     nn.Parameter(torch.zeros(5, 1, embed_dim)), # hat
-        #     nn.Parameter(torch.zeros(12, 1, embed_dim)), # uppercloth color
-        #     nn.Parameter(torch.zeros(4, 1, embed_dim)), # upper cloth style
-        #     nn.Parameter(torch.zeros(12, 1, embed_dim)), # lower cloth color
-        #     nn.Parameter(torch.zeros(4, 1, embed_dim)), # lower cloth style
-        # ]
-        # self.attr_embeds = nn.ModuleList(attr_embeds)
-        attr_embeds = [
-            nn.Parameter(torch.zeros(2, 1, embed_dim)), # gender
-            nn.Parameter(torch.zeros(5, 1, embed_dim)), # backpack
-            nn.Parameter(torch.zeros(5, 1, embed_dim)), # hat
-            nn.Parameter(torch.zeros(12, 1, embed_dim)), # uppercloth color
-            nn.Parameter(torch.zeros(4, 1, embed_dim)), # upper cloth style
-            nn.Parameter(torch.zeros(12, 1, embed_dim)), # lower cloth color
-            nn.Parameter(torch.zeros(4, 1, embed_dim)), # lower cloth style
-        ]
-        self.gender_emb = nn.Parameter(torch.zeros(2, 1, embed_dim))
-        self.backpack_emb = nn.Parameter(torch.zeros(5, 1, embed_dim))
-        self.hat_emb = nn.Parameter(torch.zeros(5, 1, embed_dim))
-        self.ucc_emb = nn.Parameter(torch.zeros(12, 1, embed_dim))
-        self.ucs_emb = nn.Parameter(torch.zeros(4, 1, embed_dim))
-        self.lcc_emb = nn.Parameter(torch.zeros(12, 1, embed_dim))
-        self.lcs_emb = nn.Parameter(torch.zeros(4, 1, embed_dim))
+
+        self.has_attr_emb = has_attr_emb
+        if has_attr_emb:
+            self.gender_emb = nn.Parameter(torch.zeros(2, 1, embed_dim))
+            self.backpack_emb = nn.Parameter(torch.zeros(5, 1, embed_dim))
+            self.hat_emb = nn.Parameter(torch.zeros(5, 1, embed_dim))
+            self.ucc_emb = nn.Parameter(torch.zeros(12, 1, embed_dim))
+            self.ucs_emb = nn.Parameter(torch.zeros(4, 1, embed_dim))
+            self.lcc_emb = nn.Parameter(torch.zeros(12, 1, embed_dim))
+            self.lcs_emb = nn.Parameter(torch.zeros(4, 1, embed_dim))
+            print("use attribute embedding.")
 
         print('using drop_out rate is : {}'.format(drop_rate))
         print('using attn_drop_out rate is : {}'.format(attn_drop_rate))
@@ -617,11 +602,6 @@ class AttrViT(nn.Module):
 
         self.pos_drop = nn.Dropout(p=drop_rate)
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
-
-        self.INs = nn.ModuleList([
-            nn.InstanceNorm1d(embed_dim)\
-            for _ in range(depth)
-        ])
 
         self.blocks = nn.ModuleList([
             Block(
@@ -636,8 +616,14 @@ class AttrViT(nn.Module):
         trunc_normal_(self.cls_token, std=.02)
         trunc_normal_(self.attr_tokens, std=.02)
         trunc_normal_(self.pos_embed, std=.02)
-        for emb in self.attr_embeds:
-            trunc_normal_(emb, std=.02)
+        if has_attr_emb:
+            trunc_normal_(self.gender_emb, std=.02)
+            trunc_normal_(self.backpack_emb, std=.02)
+            trunc_normal_(self.hat_emb, std=.02)
+            trunc_normal_(self.ucc_emb, std=.02)
+            trunc_normal_(self.ucs_emb, std=.02)
+            trunc_normal_(self.lcc_emb, std=.02)
+            trunc_normal_(self.lcs_emb, std=.02)
 
 
         self.apply(self._init_weights)
@@ -674,12 +660,16 @@ class AttrViT(nn.Module):
         x = x + self.pos_embed
 
         ##### attribute embeddings #####
-        attr_embs = 0
-        for i, attr in enumerate(attrs):
-            import ipdb;ipdb.set_trace()
-            attr_embs += self.attr_embeds[i][attr]
-        attr_embs /= len(attrs)
-        x = x + self.attr_embeds
+        if self.has_attr_emb and self.training:
+            attr_embs = self.gender_emb[attrs[0]]
+            attr_embs += self.backpack_emb[attrs[1]]
+            attr_embs += self.hat_emb[attrs[2]]
+            attr_embs += self.ucc_emb[attrs[3]]
+            attr_embs += self.ucs_emb[attrs[4]]
+            attr_embs += self.lcc_emb[attrs[5]]
+            attr_embs += self.lcs_emb[attrs[6]]        
+            attr_embs /= len(attrs)
+            x = x + attr_embs
         ##### attribute embeddings #####
 
         x = self.pos_drop(x)

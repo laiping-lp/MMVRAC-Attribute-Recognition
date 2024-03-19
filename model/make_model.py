@@ -501,7 +501,8 @@ class build_attr_vit(nn.Module):
                 stride_size=cfg.MODEL.STRIDE_SIZE,
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
-                attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
+                attn_drop_rate=cfg.MODEL.ATT_DROP_RATE,
+                has_attr_emb=cfg.MODEL.HAS_ATTRIBUTE_EMBEDDING)
         elif self.pretrain_choice == 'LUP':
             self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
                 (img_size=cfg.INPUT.SIZE_TRAIN,
@@ -509,7 +510,8 @@ class build_attr_vit(nn.Module):
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE,
-                stem_conv=True)
+                stem_conv=True,
+                has_attr_emb=cfg.MODEL.HAS_ATTRIBUTE_EMBEDDING)
         self.model_path = model_path_base
         # import ipdb; ipdb.set_trace()
         self.base.load_param(self.model_path)
