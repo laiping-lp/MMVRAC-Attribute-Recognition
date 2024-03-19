@@ -584,12 +584,32 @@ class AttrViT(nn.Module):
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.attr_tokens = nn.Parameter(torch.zeros(1, 7, embed_dim)) ########
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1 + 7, embed_dim))
-
-        # self.attr_embeds = nn.ModuleList([
-        #     nn.Parameter(torch.zeros(2, num_patches + 1, embed_dim)),
-        #     nn.Parameter(torch.zeros(5, num_patches + 1, embed_dim)),
-        # ])
-
+        # attr_embeds = [
+        #     nn.Parameter(torch.zeros(2, 1, embed_dim)), # gender
+        #     nn.Parameter(torch.zeros(5, 1, embed_dim)), # backpack
+        #     nn.Parameter(torch.zeros(5, 1, embed_dim)), # hat
+        #     nn.Parameter(torch.zeros(12, 1, embed_dim)), # uppercloth color
+        #     nn.Parameter(torch.zeros(4, 1, embed_dim)), # upper cloth style
+        #     nn.Parameter(torch.zeros(12, 1, embed_dim)), # lower cloth color
+        #     nn.Parameter(torch.zeros(4, 1, embed_dim)), # lower cloth style
+        # ]
+        # self.attr_embeds = nn.ModuleList(attr_embeds)
+        attr_embeds = [
+            nn.Parameter(torch.zeros(2, 1, embed_dim)), # gender
+            nn.Parameter(torch.zeros(5, 1, embed_dim)), # backpack
+            nn.Parameter(torch.zeros(5, 1, embed_dim)), # hat
+            nn.Parameter(torch.zeros(12, 1, embed_dim)), # uppercloth color
+            nn.Parameter(torch.zeros(4, 1, embed_dim)), # upper cloth style
+            nn.Parameter(torch.zeros(12, 1, embed_dim)), # lower cloth color
+            nn.Parameter(torch.zeros(4, 1, embed_dim)), # lower cloth style
+        ]
+        self.gender_emb = nn.Parameter(torch.zeros(2, 1, embed_dim))
+        self.backpack_emb = nn.Parameter(torch.zeros(5, 1, embed_dim))
+        self.hat_emb = nn.Parameter(torch.zeros(5, 1, embed_dim))
+        self.ucc_emb = nn.Parameter(torch.zeros(12, 1, embed_dim))
+        self.ucs_emb = nn.Parameter(torch.zeros(4, 1, embed_dim))
+        self.lcc_emb = nn.Parameter(torch.zeros(12, 1, embed_dim))
+        self.lcs_emb = nn.Parameter(torch.zeros(4, 1, embed_dim))
 
         print('using drop_out rate is : {}'.format(drop_rate))
         print('using attn_drop_out rate is : {}'.format(attn_drop_rate))
@@ -602,10 +622,6 @@ class AttrViT(nn.Module):
             nn.InstanceNorm1d(embed_dim)\
             for _ in range(depth)
         ])
-
-        self.ins_norm = instancenorm_1d(embed_dim)
-        self.lay_norm = layernorm_1d(embed_dim)
-        self.batch_norm = batchnorm_1d(embed_dim)
 
         self.blocks = nn.ModuleList([
             Block(
@@ -620,6 +636,9 @@ class AttrViT(nn.Module):
         trunc_normal_(self.cls_token, std=.02)
         trunc_normal_(self.attr_tokens, std=.02)
         trunc_normal_(self.pos_embed, std=.02)
+        for emb in self.attr_embeds:
+            trunc_normal_(emb, std=.02)
+
 
         self.apply(self._init_weights)
 
@@ -643,7 +662,7 @@ class AttrViT(nn.Module):
         self.num_classes = num_classes
         self.fc = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
-    def forward_features(self, x):
+    def forward_features(self, x, attrs=None):
         B = x.shape[0]
         x = self.patch_embed(x)
 
@@ -654,6 +673,15 @@ class AttrViT(nn.Module):
 
         x = x + self.pos_embed
 
+        ##### attribute embeddings #####
+        attr_embs = 0
+        for i, attr in enumerate(attrs):
+            import ipdb;ipdb.set_trace()
+            attr_embs += self.attr_embeds[i][attr]
+        attr_embs /= len(attrs)
+        x = x + self.attr_embeds
+        ##### attribute embeddings #####
+
         x = self.pos_drop(x)
 
         for i, blk in enumerate(self.blocks):
@@ -663,8 +691,8 @@ class AttrViT(nn.Module):
 
         return x # (B, N, C)
 
-    def forward(self, x):
-        x = self.forward_features(x)
+    def forward(self, x, attrs=None):
+        x = self.forward_features(x, attrs)
         return x
     
     def resize_pos_embed(self, posemb, posemb_new, hight, width):

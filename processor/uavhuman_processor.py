@@ -65,6 +65,8 @@ def attr_vit_do_train_with_amp(cfg,
     num_ins = cfg.DATALOADER.NUM_INSTANCE
     classes = len(train_loader.dataset.pids)
     center_weight = cfg.SOLVER.CENTER_LOSS_WEIGHT
+    id_weight = cfg.MODEL.ID_LOSS_WEIGHT
+    tri_weight = cfg.MODEL.TRIPLET_LOSS_WEIGHT
 
     best = 0.0
     best_attr = 0.0
@@ -109,7 +111,7 @@ def attr_vit_do_train_with_amp(cfg,
             model.to(device)
             with amp.autocast(enabled=True):
                 loss_tri_hard = torch.tensor(0.,device=device)
-                score, feat, attr_scores = model(img)
+                score, feat, attr_scores = model(img, attrs=attributes)
                 # import ipdb; ipdb.set_trace()
                 #### id loss
                 log_probs = nn.LogSoftmax(dim=1)(score)
@@ -153,7 +155,7 @@ def attr_vit_do_train_with_amp(cfg,
                 else:
                     loss_center = torch.tensor(0.0, device=device)
 
-                loss = loss_id + loss_tri + center_weight * loss_center + loss_attr
+                loss = id_weight * loss_id + tri_weight * loss_tri + center_weight * loss_center + loss_attr
 
             scaler.scale(loss).backward()
 

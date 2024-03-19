@@ -534,8 +534,8 @@ class build_attr_vit(nn.Module):
         for h in self.attr_head:
             h.apply(weights_init_classifier)
 
-    def forward(self, x, attr_recognition=False):
-        x = self.base(x) # B, N, C
+    def forward(self, x, attr_recognition=False, attrs=None):
+        x = self.base(x, attrs) # B, N, C
         global_feat = x[:, 0] # cls token for global feature
         attr_tokens = x[:, 1:8]
 
