@@ -10,6 +10,8 @@ conda activate reid
 bash enviroments.sh
 ```
 
+Note that, all experiments are conducted using single GPU: NVIDIA Titan RTX.
+
 ### 2. training
 Modify the paths and settings in config/uavhuman.yml, then
 
