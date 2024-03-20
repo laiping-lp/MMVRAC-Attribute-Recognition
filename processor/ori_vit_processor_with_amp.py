@@ -53,12 +53,8 @@ def ori_vit_do_train_with_amp(cfg,
 
     loss_meter = AverageMeter()
     loss_id_meter = AverageMeter()
-    loss_id_distinct_meter = AverageMeter()
     loss_tri_meter = AverageMeter()
-    loss_sct_meter = AverageMeter()
     loss_center_meter = AverageMeter()
-    loss_xded_meter = AverageMeter()
-    loss_tri_hard_meter = AverageMeter()
     acc_meter = AverageMeter()
 
     evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)
@@ -75,12 +71,8 @@ def ori_vit_do_train_with_amp(cfg,
         start_time = time.time()
         loss_meter.reset()
         loss_id_meter.reset()
-        loss_id_distinct_meter.reset()
         loss_tri_meter.reset()
-        loss_sct_meter.reset()
         loss_center_meter.reset()
-        loss_xded_meter.reset()
-        loss_tri_hard_meter.reset()
         acc_meter.reset()
         evaluator.reset()
         scheduler.step(epoch)
@@ -130,34 +122,42 @@ def ori_vit_do_train_with_amp(cfg,
                 loss_tri_hard = torch.tensor(0.,device=device)
                 score, feat = model(img)
                 ### id loss
-                log_probs = nn.LogSoftmax(dim=1)(score[:bs])
                 targets = 0.9 * targets + 0.1 / classes # label smooth
-                loss_id = (- targets * log_probs).mean(0).sum()
-                # loss_id = torch.tensor(0.0,device=device) ####### for test
-
-                #### id loss for each domain
-                loss_id_distinct = torch.tensor(0.0, device=device)
-                # for i,s in enumerate(score_):
-                #     if s is None: continue
-                #     idx = torch.nonzero(t_domains==i).squeeze()
-                #     log_probs = nn.LogSoftmax(1)(s)
-                #     label = torch.zeros((len(idx), num_pids[i])).scatter_(1, ori_label[idx].unsqueeze(1).data.cpu(), 1).to(device)
-                #     label = 0.9 * label + 0.1 / num_pids[i] # label smooth
-                #     loss_id_distinct += (- label * log_probs).mean(0).sum()
+                if isinstance(score, list):
+                    loss_id = torch.tensor(0.,device=device)
+                    for s in score:
+                        log_prob = nn.LogSoftmax(dim=1)(s)
+                        loss_id += (- targets * log_prob).mean(0).sum()
+                else:
+                    log_probs = nn.LogSoftmax(dim=1)(score)
+                    loss_id = (- targets * log_probs).mean(0).sum()
 
                 #### triplet loss
-                # target = targets.max(1)[1] ###### for mixup
-                N = feat.shape[0]
-                dist_mat = euclidean_dist(feat, feat)[:bs]
-                target_new = torch.cat([target,-torch.ones([N-bs], dtype=target.dtype, device=device)], dim=0)
-                is_pos = target_new.expand(N, N).eq(target_new.expand(N, N).t())
-                is_neg = target_new.expand(N, N).ne(target_new.expand(N, N).t())
-                dist_ap, relative_p_inds = torch.max(
-                    dist_mat[is_pos[:bs]].contiguous().view(bs, -1), 1, keepdim=True)
-                dist_an, relative_n_inds = torch.min(
-                    dist_mat[is_neg[:bs]].contiguous().view(bs, -1), 1, keepdim=True)
-                y = dist_an.new().resize_as_(dist_an).fill_(1)
-                loss_tri = nn.SoftMarginLoss()(dist_an - dist_ap, y)
+                N = bs
+                if isinstance(feat, list):
+                    loss_tri = torch.tensor(0.,device=device)
+                    for f in feat:
+                        dist_mat = euclidean_dist(f, f)
+                        target_new = torch.cat([target,-torch.ones([N], dtype=target.dtype, device=device)], dim=0)
+                        is_pos = target_new.expand(N, N).eq(target_new.expand(N, N).t())
+                        is_neg = target_new.expand(N, N).ne(target_new.expand(N, N).t())
+                        dist_ap, relative_p_inds = torch.max(
+                            dist_mat[is_pos].contiguous().view(bs, -1), 1, keepdim=True)
+                        dist_an, relative_n_inds = torch.min(
+                            dist_mat[is_neg].contiguous().view(bs, -1), 1, keepdim=True)
+                        y = dist_an.new().resize_as_(dist_an).fill_(1)
+                        loss_tri += nn.SoftMarginLoss()(dist_an - dist_ap, y)
+                else:
+                    dist_mat = euclidean_dist(feat, feat)
+                    target_new = torch.cat([target,-torch.ones([N], dtype=target.dtype, device=device)], dim=0)
+                    is_pos = target_new.expand(N, N).eq(target_new.expand(N, N).t())
+                    is_neg = target_new.expand(N, N).ne(target_new.expand(N, N).t())
+                    dist_ap, relative_p_inds = torch.max(
+                        dist_mat[is_pos].contiguous().view(bs, -1), 1, keepdim=True)
+                    dist_an, relative_n_inds = torch.min(
+                        dist_mat[is_neg].contiguous().view(bs, -1), 1, keepdim=True)
+                    y = dist_an.new().resize_as_(dist_an).fill_(1)
+                    loss_tri = nn.SoftMarginLoss()(dist_an - dist_ap, y)
                 # loss_tri = torch.tensor(0.0, device=device)
 
                 #### scatter loss
@@ -167,7 +167,12 @@ def ori_vit_do_train_with_amp(cfg,
 
                 #### center loss
                 if 'center' in cfg.MODEL.METRIC_LOSS_TYPE:
-                    loss_center = center_criterion(feat, target)
+                    if isinstance(feat, list):
+                        loss_center = torch.tensor(0.,device=device)
+                        for f in feat:
+                            loss_center += center_criterion(f, target)
+                    else:
+                        loss_center = center_criterion(feat, target)
                 else:
                     loss_center = torch.tensor(0.0, device=device)
                 #### XDED loss
@@ -179,10 +184,8 @@ def ori_vit_do_train_with_amp(cfg,
                 else:
                     loss_xded = torch.tensor(0.0, device=device)
 
-                loss = loss_id + loss_tri + loss_id_distinct\
+                loss = loss_id + loss_tri\
                     + center_weight * loss_center\
-                    + 1.0 * loss_xded + loss_tri_hard\
-                    + loss_sct # lam
 
             scaler.scale(loss).backward()
 
@@ -197,26 +200,21 @@ def ori_vit_do_train_with_amp(cfg,
             if isinstance(score, list):
                 acc = (score[0].max(1)[1] == target).float().mean()
             else:
-                acc = (score[:bs].max(1)[1] == target).float().mean()
+                acc = (score.max(1)[1] == target).float().mean()
 
             loss_meter.update(loss.item(), bs)
             loss_id_meter.update(loss_id.item(), bs)
-            loss_id_distinct_meter.update(loss_id_distinct.item(), bs)
             loss_tri_meter.update(loss_tri.item(), bs)
-            loss_sct_meter.update(loss_sct.item(), bs)
             loss_center_meter.update(center_weight*loss_center.item(), bs)
-            loss_xded_meter.update(loss_xded.item(), bs)
-            loss_tri_hard_meter.update(loss_tri_hard.item(), bs)
             acc_meter.update(acc, 1)
 
             torch.cuda.synchronize()
             if (n_iter + 1) % log_period == 0:
-                logger.info("Epoch[{}] Iteration[{}/{}] Loss: {:.3f}, id:{:.3f}, id_dis:{:.3f}, tri:{:.3f}, sct:{:.3f}, tri_hard:{:.3f}, cen:{:.3f}, xded:{:.3f} Acc: {:.3f}, Base Lr: {:.2e}"
+                logger.info("Epoch[{}] Iteration[{}/{}] Loss: {:.3f}, id:{:.3f}, tri:{:.3f}, cen:{:.3f} Acc: {:.3f}, Base Lr: {:.2e}"
                 .format(epoch, n_iter+1, len(train_loader),
                 loss_meter.avg,
-                loss_id_meter.avg, loss_id_distinct_meter.avg, loss_tri_meter.avg, loss_sct_meter.avg,
-                loss_tri_hard_meter.avg, loss_center_meter.avg, loss_xded_meter.avg,
-                acc_meter.avg, scheduler._get_lr(epoch)[0]))
+                loss_id_meter.avg, loss_tri_meter.avg,
+                loss_center_meter.avg, acc_meter.avg, scheduler._get_lr(epoch)[0]))
                 tbWriter.add_scalar('train/loss', loss_meter.avg, n_iter+1+(epoch-1)*len(train_loader))
                 tbWriter.add_scalar('train/acc', acc_meter.avg, n_iter+1+(epoch-1)*len(train_loader))
 

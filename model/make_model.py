@@ -681,7 +681,7 @@ class build_attr_vit_V2(nn.Module):
         logger.info("Number of parameter: %.2fM" % (total/1e6))
 
 class build_transformer_local(nn.Module):
-    def __init__(self, num_classes, cfg, factory, rearrange):
+    def __init__(self, num_classes, cfg, factory, attr_tokens=False):
         super(build_transformer_local, self).__init__()
         model_path = cfg.MODEL.PRETRAIN_PATH
         pretrain_choice = cfg.MODEL.PRETRAIN_CHOICE
@@ -689,20 +689,11 @@ class build_transformer_local(nn.Module):
         self.neck = cfg.MODEL.NECK
         self.neck_feat = cfg.TEST.NECK_FEAT
         self.in_planes = 768
+        self.attr_tokens = attr_tokens
 
         print('using Transformer_type: {} as a backbone'.format(cfg.MODEL.TRANSFORMER_TYPE))
 
-        if cfg.MODEL.SIE_CAMERA:
-            camera_num = camera_num
-        else:
-            camera_num = 0
-
-        if cfg.MODEL.SIE_VIEW:
-            view_num = view_num
-        else:
-            view_num = 0
-
-        self.base = factory[cfg.MODEL.TRANSFORMER_TYPE](img_size=cfg.INPUT.SIZE_TRAIN, sie_xishu=cfg.MODEL.SIE_COE, local_feature=cfg.MODEL.JPM, camera=camera_num, view=view_num, stride_size=cfg.MODEL.STRIDE_SIZE, drop_path_rate=cfg.MODEL.DROP_PATH)
+        self.base = factory[cfg.MODEL.TRANSFORMER_TYPE](img_size=cfg.INPUT.SIZE_TRAIN, local_feature=cfg.MODEL.JPM, stride_size=cfg.MODEL.STRIDE_SIZE, drop_path_rate=cfg.MODEL.DROP_PATH)
 
         if pretrain_choice == 'imagenet':
             self.base.load_param(model_path)
@@ -771,7 +762,7 @@ class build_transformer_local(nn.Module):
         print('using shift_num size:{}'.format(self.shift_num))
         self.divide_length = cfg.MODEL.DEVIDE_LENGTH
         print('using divide_length size:{}'.format(self.divide_length))
-        self.rearrange = rearrange
+        self.rearrange = cfg.MODEL.RE_ARRANGE
 
     def forward(self, x, label=None):  # label is unused if self.cos_layer == 'no'
         features = self.base(x)
@@ -825,10 +816,7 @@ class build_transformer_local(nn.Module):
                 cls_score_2 = self.classifier_2(local_feat_2_bn)
                 cls_score_3 = self.classifier_3(local_feat_3_bn)
                 cls_score_4 = self.classifier_4(local_feat_4_bn)
-            return [cls_score, cls_score_1, cls_score_2, cls_score_3,
-                        cls_score_4
-                        ], [global_feat, local_feat_1, local_feat_2, local_feat_3,
-                            local_feat_4]  # global feature for triplet loss
+            return [cls_score, cls_score_1, cls_score_2, cls_score_3, cls_score_4], [global_feat, local_feat_1, local_feat_2, local_feat_3, local_feat_4]  # global feature for triplet loss
         else:
             if self.neck_feat == 'after':
                 return torch.cat(
@@ -843,11 +831,10 @@ class build_transformer_local(nn.Module):
             self.state_dict()[i.replace('module.', '')].copy_(param_dict[i])
         print('Loading pretrained model from {}'.format(trained_path))
 
-    def load_param_finetune(self, model_path):
-        param_dict = torch.load(model_path)
-        for i in param_dict:
-            self.state_dict()[i].copy_(param_dict[i])
-        print('Loading pretrained model for finetuning from {}'.format(model_path))
+    def compute_num_params(self):
+        total = sum([param.nelement() for param in self.parameters()])
+        logger = logging.getLogger('reid.train')
+        logger.info("Number of parameter: %.2fM" % (total/1e6))
 
 class build_only_attr_vit_cls(nn.Module):
     def __init__(self, num_classes, cfg, factory):
@@ -955,6 +942,9 @@ def make_model(cfg, modelname, num_class, num_class_domain_wise=None):
     if modelname == 'vit':
         model = build_vit(num_class, cfg, __factory_T_type, num_class_domain_wise)
         print('===========building vit===========')
+    elif modelname == 'local_vit':
+        model = build_transformer_local(num_class,cfg,__factory_T_type)
+        print('===========building vit with JPM===========')
     elif modelname == 'attr_vit':
         model = build_attr_vit(num_class, cfg, __factory_T_type)
         print('===========building attr_vit===========')

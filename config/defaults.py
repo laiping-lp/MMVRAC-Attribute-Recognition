@@ -35,6 +35,13 @@ _C.MODEL.DIM = 768
 # Path to pretrained model of backbone
 _C.MODEL.PRETRAIN_PATH = ""
 
+# JPM
+_C.MODEL.JPM = False
+_C.MODEL.SHIFT_NUM = 5
+_C.MODEL.SHUFFLE_GROUP = 2
+_C.MODEL.DEVIDE_LENGTH = 4
+_C.MODEL.RE_ARRANGE = True
+
 # Use ImageNet pretrained model to initialize backbone or use self trained model to initialize the whole model
 # Options: 'imagenet' , 'self' , 'finetune'
 _C.MODEL.PRETRAIN_CHOICE = 'imagenet'
