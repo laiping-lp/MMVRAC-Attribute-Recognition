@@ -148,3 +148,18 @@ if __name__ == '__main__':
             num_query, args.local_rank,
             num_pids = num_pids,
         )
+    else:
+        print("==========> resnet!")
+        ori_vit_do_train_with_amp(
+            cfg,
+            model,
+            center_criterion,
+            train_loader,
+            val_loader,
+            optimizer,
+            optimizer_center,
+            scheduler,
+            loss_func,
+            num_query, args.local_rank,
+            num_pids = num_pids,
+        )

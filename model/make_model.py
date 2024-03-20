@@ -1,7 +1,7 @@
 import logging
 import os
 import random
-from model.backbones.vit_pytorch import TransReID, only_attr_vit_base_patch16_224_TransReID,only_attr_vit_large_patch16_224_TransReID,attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID,deit_tiny_patch16_224_TransReID, resize_pos_embed, vit_base_patch32_224_TransReID, vit_large_patch16_224_TransReID
+from model.backbones.vit_pytorch import TransReID, attr_vit_small_patch16_224_TransReID, only_attr_vit_base_patch16_224_TransReID,only_attr_vit_large_patch16_224_TransReID,attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID,deit_tiny_patch16_224_TransReID, resize_pos_embed, vit_base_patch32_224_TransReID, vit_large_patch16_224_TransReID
 import torch
 import torch.nn as nn
 
@@ -21,6 +21,7 @@ __factory_T_type = {
     'deit_tiny_patch16_224_TransReID': deit_tiny_patch16_224_TransReID,
     'swin_base_patch4_window7_224': swin_base_patch4_window7_224,
     'swin_small_patch4_window7_224': swin_small_patch4_window7_224,
+    "attr_vit_small_patch16_224_TransReID":attr_vit_small_patch16_224_TransReID, 
     "attr_vit_base_patch16_224_TransReID":attr_vit_base_patch16_224_TransReID, 
     "attr_vit_large_patch16_224_TransReID":attr_vit_large_patch16_224_TransReID,
     "only_attr_vit_base_patch16_224_TransReID":only_attr_vit_base_patch16_224_TransReID,
@@ -54,7 +55,7 @@ class Backbone(nn.Module):
     def __init__(self, model_name, num_classes, cfg, num_cls_dom_wise=None):
         super(Backbone, self).__init__()
         last_stride = cfg.MODEL.LAST_STRIDE
-        model_path_base = cfg.MODEL.PRETRAIN_PATH
+        model_path = cfg.MODEL.PRETRAIN_PATH
         
         # model_name = cfg.MODEL.NAME
         pretrain_choice = cfg.MODEL.PRETRAIN_CHOICE
@@ -67,37 +68,27 @@ class Backbone(nn.Module):
             self.base = ResNet(last_stride=last_stride, 
                                block=BasicBlock, 
                                layers=[2, 2, 2, 2])
-            model_path = os.path.join(model_path_base, \
-                "resnet18-f37072fd.pth")
             print('using resnet18 as a backbone')
         elif model_name == 'resnet34':
             self.in_planes = 512
             self.base = ResNet(last_stride=last_stride,
                                block=BasicBlock,
                                layers=[3, 4, 6, 3])
-            model_path = os.path.join(model_path_base, \
-                "resnet34-b627a593.pth")
             print('using resnet34 as a backbone')
         elif model_name == 'resnet50':
             self.base = ResNet(last_stride=last_stride,
                                block=Bottleneck,
                                layers=[3, 4, 6, 3])
-            model_path = os.path.join(model_path_base, \
-                "resnet50-0676ba61.pth")
             print('using resnet50 as a backbone')
         elif model_name == 'resnet101':
             self.base = ResNet(last_stride=last_stride,
                                block=Bottleneck, 
                                layers=[3, 4, 23, 3])
-            model_path = os.path.join(model_path_base, \
-                "resnet101-63fe2227.pth")
             print('using resnet101 as a backbone')
         elif model_name == 'resnet152':
             self.base = ResNet(last_stride=last_stride, 
                                block=Bottleneck,
                                layers=[3, 8, 36, 3])
-            model_path = os.path.join(model_path_base, \
-                "resnet152-394f9c45.pth")
             print('using resnet152 as a backbone')
         elif model_name == 'ibnnet50b':
             self.base = resnet50_ibn_b(pretrained=True)
@@ -108,18 +99,17 @@ class Backbone(nn.Module):
         elif model_name == 'ibnnet101a':
             self.base = resnet101_ibn_a(pretrained=True)
         else:
-            print(model_path_base)
-            model_path = model_path_base
+            print(model_path)
             print('unsupported backbone! but got {}'.format(model_name))
 
         if pretrain_choice == 'imagenet' and 'ibn' not in model_name:
-            print(model_path)
-            self.base = swin_base_patch4_window7_224\
-                (img_size=cfg.INPUT.SIZE_TRAIN,
-                stride_size=cfg.MODEL.STRIDE_SIZE,
-                drop_path_rate=cfg.MODEL.DROP_PATH,
-                drop_rate= cfg.MODEL.DROP_OUT,
-                attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
+            # print(model_path)
+            # self.base = swin_base_patch4_window7_224\
+            #     (img_size=cfg.INPUT.SIZE_TRAIN,
+            #     stride_size=cfg.MODEL.STRIDE_SIZE,
+            #     drop_path_rate=cfg.MODEL.DROP_PATH,
+            #     drop_rate= cfg.MODEL.DROP_OUT,
+            #     attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
             self.base.load_param(model_path)
             print('Loading pretrained ImageNet model......from {}'.format(model_path))
 
@@ -157,22 +147,11 @@ class Backbone(nn.Module):
             feat = self.bottleneck(global_feat)
 
         if self.training:
-            # if self.cos_layer:
-            #     cls_score = self.arcface(feat, label)
-            # else:
-            #     cls_score = self.classifier(feat)
-            # return cls_score, global_feat, label, None
-
-            #### multi-domain head
-            cls_score = self.classifier(feat)
-            cls_score_ = []
-            for i in range(len(self.classifiers)):
-                if i not in domains:
-                    cls_score_.append(None)
-                    continue
-                idx = torch.nonzero(domains==i).squeeze()
-                cls_score_.append(self.classifiers[i](feat[idx]))
-            return cls_score, global_feat, label, cls_score_
+            if self.cos_layer:
+                cls_score = self.arcface(feat, label)
+            else:
+                cls_score = self.classifier(feat)
+            return cls_score, global_feat
         else:
             if self.neck_feat == 'after':
                 return feat

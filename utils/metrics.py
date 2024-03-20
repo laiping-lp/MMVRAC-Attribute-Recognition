@@ -386,7 +386,7 @@ class R1_mAP_eval_ensemble():
 
 
 
-def query_aggregate(distmat, q_pids):
+def query_aggregate(distmat, q_pids, resolution=None):
     print('=> Enter query aggregation')
     uniq_ids = np.unique(q_pids)
     for pid in uniq_ids:

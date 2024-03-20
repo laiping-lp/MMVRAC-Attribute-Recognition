@@ -437,10 +437,12 @@ class TransReID(nn.Module):
             self.patch_embed = PatchEmbed_conv_stem(
                 img_size=img_size, patch_size=patch_size, stride_size=stride_size, in_chans=in_chans,
                 embed_dim=embed_dim, stem_conv = True)
+            self.stem_conv = True
         else:
             self.patch_embed = PatchEmbed_overlap(
                 img_size=img_size, patch_size=patch_size, stride_size=stride_size, in_chans=in_chans,
                 embed_dim=embed_dim)
+            self.stem_conv = False
         # MoCo V3
         # self.patch_embed.proj.weight.requires_grad = False
         # self.patch_embed.proj.bias.requires_grad = False
@@ -543,7 +545,7 @@ class TransReID(nn.Module):
                 if 'distilled' in model_path:
                     print('distill need to choose right cls token in the pth')
                     v = torch.cat([v[:, 0:1], v[:, 2:]], dim=1)
-                v = resize_pos_embed(v, self.pos_embed, self.patch_embed.num_y, self.patch_embed.num_x)
+                v = resize_pos_embed(v, self.pos_embed, self.patch_embed.num_y, self.patch_embed.num_x, self.stem_conv)
             try:
                 self.state_dict()[k].copy_(v)
                 count += 1
@@ -569,10 +571,12 @@ class AttrViT(nn.Module):
             self.patch_embed = HybridEmbed(
                 hybrid_backbone, img_size=img_size, in_chans=in_chans, embed_dim=embed_dim)
         elif 'stem_conv' in kwargs.keys() and kwargs['stem_conv']:
+            self.stem_conv = True
             self.patch_embed = PatchEmbed_conv_stem(
                 img_size=img_size, patch_size=patch_size, stride_size=stride_size, in_chans=in_chans,
                 embed_dim=embed_dim, stem_conv = True)
         else:
+            self.stem_conv = False
             self.patch_embed = PatchEmbed_overlap(
                 img_size=img_size, patch_size=patch_size, stride_size=stride_size, in_chans=in_chans,
                 embed_dim=embed_dim)
@@ -667,7 +671,7 @@ class AttrViT(nn.Module):
             attr_embs += self.ucc_emb[attrs[3]]
             attr_embs += self.ucs_emb[attrs[4]]
             attr_embs += self.lcc_emb[attrs[5]]
-            attr_embs += self.lcs_emb[attrs[6]]        
+            attr_embs += self.lcs_emb[attrs[6]]      
             attr_embs /= len(attrs)
             x = x + attr_embs
         ##### attribute embeddings #####
@@ -691,9 +695,12 @@ class AttrViT(nn.Module):
         posemb_token, posemb_grid = posemb[:, :1], posemb[0, 1:]
         ntok_new -= 1
 
-        gs_old = int(math.sqrt(len(posemb_grid)))
+        if self.stem_conv:
+            gs_old_h, gs_old_w = 16, 8
+        else:
+            gs_old_h = gs_old_w = int(math.sqrt(len(posemb_grid)))
         print('Resized position embedding from size:{} to size: {} with height:{} width: {}'.format(posemb.shape, posemb_new.shape, hight, width))
-        posemb_grid = posemb_grid.reshape(1, gs_old, gs_old, -1).permute(0, 3, 1, 2)
+        posemb_grid = posemb_grid.reshape(1, gs_old_h, gs_old_w, -1).permute(0, 3, 1, 2)
         posemb_grid = F.interpolate(posemb_grid, size=(hight, width), mode='bilinear')
         posemb_grid = posemb_grid.permute(0, 2, 3, 1).reshape(1, hight * width, -1)
         posemb = torch.cat([posemb_token.repeat(1,8,1), posemb_grid], dim=1)
@@ -897,20 +904,21 @@ class ViT_Only_Attr_Cls(nn.Module):
         # print("Number of parameter: %.2fM" % (total/1e6))
         return total/1e6
 
-def resize_pos_embed(posemb, posemb_new, hight, width):
-    # Rescale the grid of position embeddings when loading from state_dict. Adapted from
-    # https://github.com/google-research/vision_transformer/blob/00883dd691c63a6830751563748663526e811cee/vit_jax/checkpoint.py#L224
+def resize_pos_embed(posemb, posemb_new, hight, width, stem_conv=False):
     ntok_new = posemb_new.shape[1]
 
     posemb_token, posemb_grid = posemb[:, :1], posemb[0, 1:]
     ntok_new -= 1
 
-    gs_old = int(math.sqrt(len(posemb_grid)))
+    if stem_conv:
+        gs_old_h, gs_old_w = 16, 8
+    else:
+        gs_old_h = gs_old_w = int(math.sqrt(len(posemb_grid)))
     print('Resized position embedding from size:{} to size: {} with height:{} width: {}'.format(posemb.shape, posemb_new.shape, hight, width))
-    posemb_grid = posemb_grid.reshape(1, gs_old, gs_old, -1).permute(0, 3, 1, 2)
+    posemb_grid = posemb_grid.reshape(1, gs_old_h, gs_old_w, -1).permute(0, 3, 1, 2)
     posemb_grid = F.interpolate(posemb_grid, size=(hight, width), mode='bilinear')
     posemb_grid = posemb_grid.permute(0, 2, 3, 1).reshape(1, hight * width, -1)
-    posemb = torch.cat([posemb_token, posemb_grid], dim=1)
+    posemb = torch.cat([posemb_token.repeat(1,8,1), posemb_grid], dim=1)
     return posemb
 
 def resize_pos_embed_part_vit(posemb, part_num, posemb_new, hight, width):
@@ -946,6 +954,31 @@ def vit_base_patch16_224_TransReID(img_size=(256, 128), stride_size=16, drop_rat
         norm_name=norm, **kwargs)
 
     return model
+
+
+def attr_vit_small_patch16_224_TransReID(img_size=(256, 128), stride_size=16, drop_rate=0., attn_drop_rate=0.,drop_path_rate=0.1, norm='LN', **kwargs):
+    kwargs.setdefault('qk_scale', 768 ** -0.5)
+    model = AttrViT(
+        img_size=img_size, patch_size=16, stride_size=stride_size, embed_dim=768, depth=8, num_heads=8,  mlp_ratio=3., qkv_bias=False, drop_path_rate = drop_path_rate,\
+        drop_rate=drop_rate, attn_drop_rate=attn_drop_rate,
+        norm_name=norm, **kwargs)
+
+    return model
+
+def attr_deit_small_patch16_224_TransReID(img_size=(256, 128), stride_size=16, drop_path_rate=0.0, drop_rate=0.0, attn_drop_rate=0.0, norm='LN', **kwargs):
+    model = AttrViT(
+        img_size=img_size, patch_size=16, stride_size=stride_size, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
+        drop_path_rate=drop_path_rate, drop_rate=drop_rate, attn_drop_rate=attn_drop_rate, norm_name=norm, **kwargs)
+
+    return model
+
+def attr_deit_tiny_patch16_224_TransReID(img_size=(256, 128), stride_size=16, drop_path_rate=0.0, drop_rate=0.0, attn_drop_rate=0.0, norm='LN', **kwargs):
+    model = AttrViT(
+        img_size=img_size, patch_size=16, stride_size=stride_size, embed_dim=192, depth=12, num_heads=3, mlp_ratio=4, qkv_bias=True,
+        drop_path_rate=drop_path_rate, drop_rate=drop_rate, attn_drop_rate=attn_drop_rate, norm_name=norm, **kwargs)
+
+    return model
+
 
 def attr_vit_base_patch16_224_TransReID(img_size=(256, 128), stride_size=16, drop_rate=0.0, attn_drop_rate=0.0, drop_path_rate=0.1, norm='LN', **kwargs):
     print("======>   attr_vit_base_patch16_224_TransReID")
