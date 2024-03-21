@@ -822,8 +822,9 @@ class build_transformer_local(nn.Module):
                 return torch.cat(
                     [feat, local_feat_1_bn / 4, local_feat_2_bn / 4, local_feat_3_bn / 4, local_feat_4_bn / 4], dim=1)
             else:
-                return torch.cat(
-                    [global_feat, local_feat_1 / 4, local_feat_2 / 4, local_feat_3 / 4, local_feat_4 / 4], dim=1)
+                # return torch.cat(
+                #     [global_feat, local_feat_1 / 4, local_feat_2 / 4, local_feat_3 / 4, local_feat_4 / 4], dim=1)
+                return global_feat
 
     def load_param(self, trained_path):
         param_dict = torch.load(trained_path)

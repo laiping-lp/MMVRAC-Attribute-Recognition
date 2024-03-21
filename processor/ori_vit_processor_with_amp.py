@@ -4,7 +4,7 @@ import time
 import torch
 import torch.nn as nn
 from loss.domain_SCT_loss import domain_SCT_loss
-from loss.triplet_loss import euclidean_dist, hard_example_mining
+from loss.triplet_loss import TripletLoss, euclidean_dist, hard_example_mining
 from loss.triplet_loss_for_mixup import hard_example_mining_for_mixup
 from model.make_model import make_model
 from processor.inf_processor import do_inference, do_inference_multi_targets
@@ -124,40 +124,22 @@ def ori_vit_do_train_with_amp(cfg,
                 ### id loss
                 targets = 0.9 * targets + 0.1 / classes # label smooth
                 if isinstance(score, list):
-                    loss_id = torch.tensor(0.,device=device)
-                    for s in score:
-                        log_prob = nn.LogSoftmax(dim=1)(s)
-                        loss_id += (- targets * log_prob).mean(0).sum()
+                    log_probs = [nn.LogSoftmax(dim=1)(s) for s in score[1:]]
+                    loss_id = [(- targets * p).mean(0).sum() for p in log_probs]
+                    loss_id = sum(loss_id) / len(loss_id)
+                    loss_id = 0.5*loss_id + 0.5 * (- targets * nn.LogSoftmax(dim=1)(score[0])).mean(0).sum()
                 else:
                     log_probs = nn.LogSoftmax(dim=1)(score)
                     loss_id = (- targets * log_probs).mean(0).sum()
 
                 #### triplet loss
-                N = bs
+                triplet = TripletLoss()
                 if isinstance(feat, list):
-                    loss_tri = torch.tensor(0.,device=device)
-                    for f in feat:
-                        dist_mat = euclidean_dist(f, f)
-                        target_new = torch.cat([target,-torch.ones([N], dtype=target.dtype, device=device)], dim=0)
-                        is_pos = target_new.expand(N, N).eq(target_new.expand(N, N).t())
-                        is_neg = target_new.expand(N, N).ne(target_new.expand(N, N).t())
-                        dist_ap, relative_p_inds = torch.max(
-                            dist_mat[is_pos].contiguous().view(bs, -1), 1, keepdim=True)
-                        dist_an, relative_n_inds = torch.min(
-                            dist_mat[is_neg].contiguous().view(bs, -1), 1, keepdim=True)
-                        y = dist_an.new().resize_as_(dist_an).fill_(1)
-                        loss_tri += nn.SoftMarginLoss()(dist_an - dist_ap, y)
+                    loss_tri = [triplet(f, target)[0] for f in feat[1:]]
+                    loss_tri = sum(loss_tri) / len(loss_tri)
+                    loss_tri = 0.5*loss_tri + 0.5*triplet(feat[0], target)[0]
                 else:
-                    dist_mat = euclidean_dist(feat, feat)
-                    target_new = torch.cat([target,-torch.ones([N], dtype=target.dtype, device=device)], dim=0)
-                    is_pos = target_new.expand(N, N).eq(target_new.expand(N, N).t())
-                    is_neg = target_new.expand(N, N).ne(target_new.expand(N, N).t())
-                    dist_ap, relative_p_inds = torch.max(
-                        dist_mat[is_pos].contiguous().view(bs, -1), 1, keepdim=True)
-                    dist_an, relative_n_inds = torch.min(
-                        dist_mat[is_neg].contiguous().view(bs, -1), 1, keepdim=True)
-                    y = dist_an.new().resize_as_(dist_an).fill_(1)
-                    loss_tri = nn.SoftMarginLoss()(dist_an - dist_ap, y)
+                    loss_tri = triplet(feat, target)[0]
                 # loss_tri = torch.tensor(0.0, device=device)
 
                 #### scatter loss
@@ -168,7 +150,9 @@ def ori_vit_do_train_with_amp(cfg,
                 #### center loss
                 if 'center' in cfg.MODEL.METRIC_LOSS_TYPE:
                     if isinstance(feat, list):
-                        loss_center = torch.tensor(0.,device=device)
+                        loss_center = [center_criterion(f, target) for f in feat[1:]]
+                        loss_center = sum(loss_center) / len(loss_center)
+                        loss_center = 0.5*loss_center + 0.5*center_criterion(feat[0], target)
                         for f in feat:
                             loss_center += center_criterion(f, target)
                     else:

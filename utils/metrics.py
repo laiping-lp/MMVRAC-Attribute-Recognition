@@ -315,7 +315,7 @@ class R1_mAP_eval():
     
 
 class R1_mAP_eval_ensemble():
-    def __init__(self, num_query, max_rank=50,  feat_norm=True, reranking=False, query_aggregate=False, feature_aggregate=False, query=None, gallery=None, log_path=None,gen_result=False, num_models=1):
+    def __init__(self, num_query, max_rank=50,  feat_norm=True, reranking=False, query_aggregate=False, feature_aggregate=False, query=None, gallery=None, log_path=None,gen_result=False, num_models=1, threshold=0):
         super(R1_mAP_eval_ensemble, self).__init__()
         self.num_query = num_query
         self.max_rank = max_rank
@@ -330,18 +330,21 @@ class R1_mAP_eval_ensemble():
         self.feature_aggregate = feature_aggregate
         self.gen_result = gen_result
         self.num_models = num_models
+        self.threshold = threshold
 
     def reset(self):
         self.feats = [[] for _ in range(self.num_models)]
         self.pids = []
         self.camids = []
+        self.resolutions = []
 
     def update(self, output):  # called once for each batch
-        feats, pid, camid = output
+        feats, pid, camid, resolutions = output
         for i, feat in enumerate(feats):
             self.feats[i].append(feat.cpu())
         self.pids.extend(np.asarray(pid))
         self.camids.extend(np.asarray(camid))
+        self.resolutions.extend(np.asarray(resolutions))
 
     def compute(self):  # called after each epoch
         # import ipdb
@@ -357,6 +360,7 @@ class R1_mAP_eval_ensemble():
                 qf = feat_aggregate(qf, q_pids)
             q_pids = np.asarray(self.pids[:self.num_query])
             q_camids = np.asarray(self.camids[:self.num_query])
+            q_resolutions = np.asarray(self.resolutions[:self.num_query])
             # gallery
             gf = feat[self.num_query:]
             g_pids = np.asarray(self.pids[self.num_query:])
@@ -372,13 +376,14 @@ class R1_mAP_eval_ensemble():
                 
             ##### key operation of ensemble
             distmats.append(distmat)
-        ##### key operation of ensemble 
+
+        ##### key operation of ensemble
         distmat = np.mean(distmats, axis=0)
-        # distmat = 0.9*distmats[0] + 0.1*distmats[1]
+        # distmat = 0.2*distmats[0] + 0.6*distmats[1] + 0.2*distmats[2]
         
         
         if self.query_aggregate:
-            distmat = query_aggregate(distmat, q_pids)
+            distmat = query_aggregate(distmat, q_pids, q_resolutions, self.threshold)
             
         cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result)
 
@@ -386,12 +391,27 @@ class R1_mAP_eval_ensemble():
 
 
 
-def query_aggregate(distmat, q_pids, resolution=None):
+def query_aggregate(distmat, q_pids, resolution=None, threshold=0):
     print('=> Enter query aggregation')
+    if threshold > 0 and resolution is not None:
+        low_res_inds = np.argwhere(np.array(resolution) < threshold).squeeze()
+        print("low resolution queries")
     uniq_ids = np.unique(q_pids)
     for pid in uniq_ids:
         indexs = np.argwhere(q_pids==pid).squeeze()
-        avg_dist = np.mean(distmat[indexs], axis=0)
+        weights = [1/len(indexs) for _ in indexs]
+        if threshold > 0 and resolution is not None:
+            cnt = 0
+            for i, ind in enumerate(indexs):
+                if ind in low_res_inds:
+                    weights[i] = 0
+                    cnt += 1
+            if cnt == len(indexs):
+                print("all low: {}".format(pid))
+                weights = [1/len(indexs) for _ in indexs]
+
+        # avg_dist = np.mean(distmat[indexs], axis=0)
+        avg_dist = sum([distmat[indexs[ind]]*w for ind, w in enumerate(weights)])
         distmat[indexs] = avg_dist
 
     return distmat

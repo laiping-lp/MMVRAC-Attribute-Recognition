@@ -61,6 +61,7 @@ class CommDataset(Dataset):
             img_path, pid, camid = self.img_items[index]
             others = ''
         ori_img = read_image(img_path)
+        h,w = ori_img.size
         # lab_img = cv2.cvtColor(np.array(ori_img), cv2.COLOR_RGB2LAB) # h,w,c
         # lab_img = Image.fromarray(lab_img)
         # # gray_img = cv2.cvtColor(np.array(ori_img), cv2.COLOR_RGB2GRAY) # h,w
@@ -92,7 +93,8 @@ class CommDataset(Dataset):
             "camid": camid,
             "img_path": img_path,
             "ori_label": pid_domain_wise,
-            "others": others
+            "others": others,
+            "resolutions": h*w,
         }
 
     @property

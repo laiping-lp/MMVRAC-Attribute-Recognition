@@ -189,6 +189,7 @@ def do_inference_ensemble(cfg,
                  gen_result=False,
                  query_aggregate=False,
                  attr_recognition=False,
+                 threshold=0,
                 ):
     device = "cuda"
     if iflog:
@@ -196,14 +197,11 @@ def do_inference_ensemble(cfg,
         logger.info("Enter inferencing")
 
     log_path = cfg.LOG_ROOT + cfg.LOG_NAME
-    evaluator = R1_mAP_eval_ensemble(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking = reranking, query = query, gallery = gallery, log_path = log_path, gen_result=gen_result, query_aggregate=query_aggregate, num_models=2)
+    evaluator = R1_mAP_eval_ensemble(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking = reranking, query = query, gallery = gallery, log_path = log_path, gen_result=gen_result, query_aggregate=query_aggregate, num_models=len(models), threshold=threshold)
 
     evaluator.reset()
 
     if device:
-        if torch.cuda.device_count() > 1:
-            print('Using {} GPUs for inference'.format(torch.cuda.device_count()))
-            model = nn.DataParallel(model)
         for model in models.values():
             model.to(device)
 
@@ -222,6 +220,7 @@ def do_inference_ensemble(cfg,
         pid = informations['targets']
         camids = informations['camid']
         imgpath = informations['img_path']
+        resolutions = informations['resolutions']
 
         # attributes
         attrs = informations['others']
@@ -245,7 +244,7 @@ def do_inference_ensemble(cfg,
                     feat = outputs[:, 0]
                 feats.append(feat)
                 
-            evaluator.update((feats, pid, camids))
+            evaluator.update((feats, pid, camids, resolutions))
             img_path_list.extend(imgpath)
 
     if attr_recognition:
