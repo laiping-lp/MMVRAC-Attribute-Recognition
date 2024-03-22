@@ -697,13 +697,15 @@ class AttrViT(nn.Module):
         x = self.forward_features(x, attrs)
         return x
     
-    def resize_pos_embed(self, posemb, posemb_new, hight, width):
+    def resize_pos_embed(self, posemb, posemb_new, hight, width, hw_old=None):
         ntok_new = posemb_new.shape[1]
 
         posemb_token, posemb_grid = posemb[:, :1], posemb[0, 1:]
         ntok_new -= 1
 
-        if self.stem_conv:
+        if hw_old:
+            gs_old_h, gs_old_w = hw_old
+        elif self.stem_conv:
             gs_old_h, gs_old_w = 16, 8
         else:
             gs_old_h = gs_old_w = int(math.sqrt(len(posemb_grid)))

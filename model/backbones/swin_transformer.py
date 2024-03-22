@@ -619,7 +619,7 @@ class SwinTransformer(nn.Module):
         x = x.transpose(1,2)
         return x
 
-    def forward(self, x):
+    def forward(self, x, attrs=None):
         x = self.forward_features(x)
         # x = self.head(x) # w/o head
         return x

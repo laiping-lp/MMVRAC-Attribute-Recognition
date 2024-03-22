@@ -374,7 +374,7 @@ in_plane_dict = {
 }
 
 class build_vit(nn.Module):
-    def __init__(self, num_classes, cfg, model_name, num_cls_dom_wise=None, pretrain_choice='imagenet', model_path=None):
+    def __init__(self, num_classes, cfg, model_name=None, num_cls_dom_wise=None, pretrain_choice='imagenet', model_path=None):
         super().__init__()
         self.cfg = cfg
         model_path_base = cfg.MODEL.PRETRAIN_PATH
@@ -383,6 +383,8 @@ class build_vit(nn.Module):
         self.cos_layer = cfg.MODEL.COS_LAYER
         self.neck = cfg.MODEL.NECK
         self.neck_feat = cfg.TEST.NECK_FEAT
+        if not model_name:
+            model_name = cfg.MODEL.TRANSFORMER_TYPE
         if model_name in in_plane_dict:
             self.in_planes = in_plane_dict[model_name]
         else:
@@ -485,7 +487,7 @@ class build_vit(nn.Module):
         logger.info("Number of parameter: %.2fM" % (total/1e6))
 
 class build_attr_vit(nn.Module):
-    def __init__(self, num_classes, cfg, model_name, pretrain_choice='imagenet', stride_size=16, model_path=None):
+    def __init__(self, num_classes, cfg, model_name=None, pretrain_choice='imagenet', stride_size=16, model_path=None, img_size=None):
         super().__init__()
         self.cfg = cfg
         model_path_base = cfg.MODEL.PRETRAIN_PATH
@@ -494,6 +496,8 @@ class build_attr_vit(nn.Module):
         self.cos_layer = cfg.MODEL.COS_LAYER
         self.neck = cfg.MODEL.NECK
         self.neck_feat = cfg.TEST.NECK_FEAT
+        if not model_name:
+            model_name = cfg.MODEL.TRANSFORMER_TYPE
         if model_name in in_plane_dict:
             self.in_planes = in_plane_dict[model_name]
         else:
@@ -505,9 +509,10 @@ class build_attr_vit(nn.Module):
         self.gap = nn.AdaptiveAvgPool2d(1)
         self.num_classes = num_classes
 
-        if self.pretrain_choice == 'imagenet':
+        img_size = cfg.INPUT.SIZE_TRAIN if not img_size else img_size
+        if self.pretrain_choice in ['imagenet', 'self']:
             self.base = factory[model_name]\
-                (img_size=cfg.INPUT.SIZE_TRAIN,
+                (img_size=img_size,
                 stride_size=stride_size,
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
@@ -515,7 +520,7 @@ class build_attr_vit(nn.Module):
                 has_attr_emb=cfg.MODEL.HAS_ATTRIBUTE_EMBEDDING)
         elif self.pretrain_choice == 'LUP':
             self.base = factory[model_name]\
-                (img_size=cfg.INPUT.SIZE_TRAIN,
+                (img_size=img_size,
                 stride_size=stride_size,
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
@@ -526,11 +531,14 @@ class build_attr_vit(nn.Module):
         if model_path:
             self.model_path = model_path
             self.load_param(model_path)
+        elif pretrain_choice == 'self':
+            self.model_path = model_path_base
+            self.load_param(model_path_base)
         else:
             self.model_path = model_path_base
             self.base.load_param(self.model_path)
         print('Loading pretrained model......from {}'.format(self.model_path))
-            
+        
         #### original one
         self.classifier = nn.Linear(self.in_planes, self.num_classes, bias=False)
         self.classifier.apply(weights_init_classifier)
@@ -549,6 +557,7 @@ class build_attr_vit(nn.Module):
         ])
         for h in self.attr_head:
             h.apply(weights_init_classifier)
+            
 
     def forward(self, x, attr_recognition=False, attrs=None):
         x = self.base(x, attrs) # B, N, C
@@ -557,10 +566,11 @@ class build_attr_vit(nn.Module):
 
         feat = self.bottleneck(global_feat)
 
-        attr_scores = []
-        for i in range(7):
-            score = self.attr_head[i](attr_tokens[:, i])
-            attr_scores.append(score)
+        if attr_recognition or self.training:
+            attr_scores = []
+            for i in range(7):
+                score = self.attr_head[i](attr_tokens[:, i])
+                attr_scores.append(score)
 
         # import ipdb; ipdb.set_trace()
 
@@ -583,7 +593,7 @@ class build_attr_vit(nn.Module):
             #     continue
             if i in self.state_dict().keys():
                 if 'pos_embed' in i and param_dict[i].shape != self.base.pos_embed.shape:
-                    param_dict[i] = self.base.resize_pos_embed(param_dict[i], self.base.pos_embed, self.base.patch_embed.num_y, self.base.patch_embed.num_x)
+                    param_dict[i] = self.base.resize_pos_embed(param_dict[i], self.base.pos_embed, self.base.patch_embed.num_y, self.base.patch_embed.num_x, [21, 10] if self.pretrain_choice=='self' else None)
                 self.state_dict()[i].copy_(param_dict[i])
                 count += 1
         print('Loading trained model from {}\n Load {}/{} layers'.format(trained_path, count, len(self.state_dict())))
@@ -956,13 +966,13 @@ class build_only_attr_vit_cls(nn.Module):
 def make_model(cfg, modelname, num_class, num_class_domain_wise=None):
     pretrain_choice = cfg.MODEL.PRETRAIN_CHOICE
     if modelname == 'vit':
-        model = build_vit(num_class, cfg, modelname, num_class_domain_wise, pretrain_choice)
+        model = build_vit(num_class, cfg, None, num_class_domain_wise, pretrain_choice)
         print('===========building vit===========')
     elif modelname == 'local_vit':
         model = build_transformer_local(num_class,cfg,__factory_T_type)
         print('===========building vit with JPM===========')
     elif modelname == 'attr_vit':
-        model = build_attr_vit(num_class, cfg, modelname, pretrain_choice)
+        model = build_attr_vit(num_class, cfg, None, pretrain_choice, cfg.MODEL.STRIDE_SIZE)
         print('===========building attr_vit===========')
     elif modelname == 'attr_vit_only_cls':
         model = build_attr_vit_V2(num_class, cfg, __factory_T_type)

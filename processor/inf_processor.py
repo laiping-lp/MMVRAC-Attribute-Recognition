@@ -232,10 +232,13 @@ def do_inference_ensemble(cfg,
             attributes.append(attrs[k])
         with torch.no_grad():
             img = img.to(device)
+            img_swin = nn.functional.interpolate(img, [224, 224])
             feats = []
             for name in models.keys():
-                if 'swin' in name: continue
-                outputs  = models[name](img)
+                if 'swin' in name:
+                    outputs = models[name](img_swin)
+                else:
+                    outputs  = models[name](img)
                 if attr_recognition:
                     feat, attr_scores = outputs
                     feat = feat[:, 0]

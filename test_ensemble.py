@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # output_dir = os.path.join(cfg.LOG_ROOT, cfg.LOG_NAME)
     # if output_dir and not os.path.exists(output_dir):
     #     os.makedirs(output_dir)
-    output_dir = "/home/liyuke/data4/exp/vit_s8_b12_l16_2_6_2_ensemble_remove_low_resoluton"
+    output_dir = "/home/liyuke/data4/exp/vit_s8_b12_l16_swinb_1_1_1_1_ensemble"
     logger = setup_logger("reid", output_dir, if_train=False)
     logger.info(args)
 
@@ -41,31 +41,25 @@ if __name__ == "__main__":
             logger.info(config_str)
     logger.info("Running with config:\n{}".format(cfg))
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
     model_vitb = build_attr_vit(619, cfg, 'attr_vit_base_patch16_224_TransReID', stride_size=12, model_path="/home/liyuke/data4/exp/attr_vit_b12_rea_256x128_centerLoss_lr1e-2/attr_vit_best.pth")
     model_vitl = build_attr_vit(619, cfg, 'attr_vit_large_patch16_224_TransReID', stride_size=16, model_path="/home/liyuke/data4/exp/attr_vit_l16_rea_256x128_centerLoss_adamw3.5e-5/attr_vit_best.pth")
     model_vits = build_attr_vit(619, cfg, 'attr_vit_small_patch16_224_TransReID', stride_size=8, model_path="/home/liyuke/data4/exp/attr_vit_s16_rea_256x128_centerLoss_lr1e-2/attr_vit_best.pth")
-    # model_swinb = swin_base_patch4_window7_224()
-    model_ibn101a = Backbone('ibnnet101a', 619, cfg, path="/home/liyuke/data4/exp/attr_ibnnet101a_rea_256x128_centerLoss_lr1e-2/ibnnet101a_best.pth")
+    # model_swinb = build_attr_vit(619, cfg, 'swin_base_patch4_window7_224', model_path="/home/liyuke/data4/exp/uavhuman_attr_swin_b16_224_224_adamw_3.5e-5/attr_vit_only_cls_best.pth", img_size=[224,224])
+    # model_ibn101a = Backbone('ibnnet101a', 619, cfg, path="/home/liyuke/data4/exp/attr_ibnnet101a_rea_256x128_centerLoss_lr1e-2/ibnnet101a_best.pth")
     
     models = {
         "vit_s": model_vits,
         "vit_b": model_vitb,
         "vit_l": model_vitl,
-        # "ibn_101a": model_ibn101a,
         # "swin_b": model_swinb,
+        # "ibn_101a": model_ibn101a,
         }
 
-    # transforms = T.compose([
-    #     T.Resize([224,224], interpolation=3),
-    #     T.ToTensor(),
-    #     T.Normalize([0.5,0.5,0.5],[0.5,0.5,0.5])
-    # ])
 
     for testname in cfg.DATASETS.TEST:
         _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
-        # _, _, swin_loader, num_query = build_reid_test_loader(cfg, testname, test_transforms=transforms)
 
         do_inference_ensemble(
             cfg,
@@ -75,5 +69,4 @@ if __name__ == "__main__":
             reranking=cfg.TEST.RE_RANKING,
             query_aggregate=True,
             threshold=0,
-            # swin_loader=swin_loader
         )
