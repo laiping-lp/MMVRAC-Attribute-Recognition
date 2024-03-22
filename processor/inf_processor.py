@@ -190,6 +190,7 @@ def do_inference_ensemble(cfg,
                  query_aggregate=False,
                  attr_recognition=False,
                  threshold=0,
+                 swin_loader=None,
                 ):
     device = "cuda"
     if iflog:
@@ -233,6 +234,7 @@ def do_inference_ensemble(cfg,
             img = img.to(device)
             feats = []
             for name in models.keys():
+                if 'swin' in name: continue
                 outputs  = models[name](img)
                 if attr_recognition:
                     feat, attr_scores = outputs
@@ -241,7 +243,7 @@ def do_inference_ensemble(cfg,
                         class_indices = torch.argmax(scores, dim=1)
                         attr_classes.append(class_indices.tolist())
                 else:
-                    feat = outputs[:, 0]
+                    feat = outputs
                 feats.append(feat)
                 
             evaluator.update((feats, pid, camids, resolutions))

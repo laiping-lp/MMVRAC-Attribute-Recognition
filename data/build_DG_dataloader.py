@@ -20,7 +20,7 @@ from .common import CommDataset
 from .datasets import DATASET_REGISTRY
 from .transforms import build_transforms
 
-def build_reid_train_loader(cfg):
+def build_reid_train_loader(cfg, model=None):
     num_workers = cfg.DATALOADER.NUM_WORKERS
 
     train_transforms = build_transforms(cfg, is_train=True, is_fake=False)
@@ -78,13 +78,15 @@ def build_reid_train_loader(cfg):
         flag1=cfg.DATALOADER.NAIVE_WAY,
         flag2=cfg.DATALOADER.DELETE_REM,
         train_pids=train_pids,
-        cfg = cfg)
+        cfg = cfg,
+        model=model)
 
     return train_loader, num_domains, train_pids
 
 
-def build_reid_test_loader(cfg, dataset_name, opt=None, flag_test=True, shuffle=False, only_gallery=False, only_query=False, eval_time=False, bs=None, split_id=None):
-    test_transforms = build_transforms(cfg, is_train=False)
+def build_reid_test_loader(cfg, dataset_name, opt=None, flag_test=True, shuffle=False, only_gallery=False, only_query=False, eval_time=False, bs=None, split_id=None, test_transforms=None):
+    if test_transforms is None:
+        test_transforms = build_transforms(cfg, is_train=False)
     _root = cfg.DATASETS.ROOT_DIR
     if opt is None:
         if split_id: ### for 4 small target domains only (viper...)
@@ -161,11 +163,17 @@ def fast_batch_collator(batched_inputs):
 
 
 def make_sampler(train_set, num_batch, num_instance, num_workers,
-                 mini_batch_size, drop_last=True, flag1=True, flag2=True, seed=None, train_pids=None, cfg=None):
+                 mini_batch_size, drop_last=True, flag1=True, flag2=True, seed=None, train_pids=None, cfg=None, model=None):
 
     if cfg.DATALOADER.SAMPLER == 'single_domain':
         data_sampler = samplers.DomainIdentitySampler(train_set.img_items,
                                                       mini_batch_size, num_instance,train_pids)
+    elif cfg.DATALOADER.SAMPLER == 'SHS':
+        test_transforms = build_transforms(cfg, is_train=False)
+        data_sampler = samplers.SHS(cfg=cfg, train_set=train_set,
+                                     batch_size=mini_batch_size,
+                                     model=model,
+                                     transform=test_transforms)
     elif flag1:
         data_sampler = samplers.RandomIdentitySampler(train_set.img_items,
                                                       mini_batch_size, num_instance)

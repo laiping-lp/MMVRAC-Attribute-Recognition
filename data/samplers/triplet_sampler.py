@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from torch.utils.data.sampler import Sampler
 from data.samplers.graph_sampler import GraphSampler
-from loss.triplet_loss import euclidean_dist
+from collections import OrderedDict, defaultdict
 
 from utils import comm
 import os
@@ -649,3 +649,171 @@ class DomainSuffleSampler(Sampler):
         while True:
             indices = self._get_epoch_indices()
             yield from indices
+
+
+#### Style-aware Hard-negative Sampling ####
+class SHS(DomainIdentitySampler):
+    def __init__(self, cfg, train_set, batch_size, model, transform):
+        self.cfg = cfg
+        self.model = model
+        self.transform = transform
+        self.verbose = True
+
+        self.data_source = train_set.img_items
+        self.pid_dict = train_set.pid_dict
+        self.batch_size = batch_size
+        self.num_instances = cfg.DATALOADER.NUM_INSTANCE
+        self.num_pids_per_batch = batch_size // self.num_instances
+        self.num_workers = cfg.DATALOADER.NUM_WORKERS
+
+        self.index_dic = defaultdict(list)
+        for index, (_, pid, _, _) in enumerate(self.data_source):
+            self.index_dic[pid].append(index)
+        self.pids = list(self.index_dic.keys())
+
+        # estimate number of examples in an epoch
+        self.length = 0
+        for pid in self.pids:
+            idxs = self.index_dic[pid]
+            num = len(idxs)
+            if num < self.num_instances:
+                num = self.num_instances
+            self.length += num - num % self.num_instances
+
+        self.epoch = 0
+        self.save_path = os.path.join(cfg.LOG_ROOT, cfg.LOG_NAME)
+        
+        self.logger = logging.getLogger('reid.train')
+
+    def calc_distance(self, dataset):
+        from torch.utils.data import DataLoader
+        from data.datasets.bases import BaseDataset
+        data_loader = DataLoader(
+            dataset=BaseDataset(dataset,[],[], self.transform),
+            batch_size=self.batch_size, num_workers=self.num_workers,
+            shuffle=False, pin_memory=True)
+
+        features, _ = extract_features(self.model, data_loader, self.verbose, logger=self.logger)
+        features = torch.cat([features[fname.split('/')[-1]].unsqueeze(0) for fname, _, _, _ in dataset], 0)
+
+        # dist_compute
+        dist = euclidean_distance(features, features)
+
+        return dist
+
+    def __iter__(self):
+        self.epoch = self.epoch + 1
+        self.logger.info("start batch dividing.")
+        self.logger.info("Style-aware Hard-negative Sampling.")
+        t0 = time.time()
+
+        #### use model to calc dist
+        sam_index = []
+        for pid in self.pids:
+            # random select one image for each id
+            index = np.random.choice(self.index_dic[pid], size=1)[0]
+            sam_index.append(index)
+        dataset = [self.data_source[i] for i in sam_index]
+        dist_mat = self.calc_distance(dataset)
+        N = dist_mat.shape[0]
+        mask = torch.eye(N,N, device=dist_mat.device) * 1e15
+        dist_mat = dist_mat + mask
+        #### use model to calc dist
+
+        num_k = self.batch_size // self.num_instances - 1
+        _, topk_index = torch.topk(dist_mat.cuda(), num_k, largest=False)
+        topk_index = topk_index.cpu().numpy()
+
+        batch_idxs_dict = defaultdict(list)
+        for pid in self.pids:
+            idxs = copy.deepcopy(self.index_dic[pid])
+            if len(idxs) < self.num_instances:
+                idxs = np.random.choice(idxs, size=self.num_instances, replace=True)
+            random.shuffle(idxs)
+            batch_idxs = []
+            for idx in idxs:
+                batch_idxs.append(idx)
+                if len(batch_idxs) == self.num_instances:
+                    batch_idxs_dict[pid].append(batch_idxs)
+                    batch_idxs = []
+
+        avai_pids = copy.deepcopy(self.pids)
+        final_idxs = []
+        while len(avai_pids) >= self.num_pids_per_batch:
+            anchor_pid = random.choice(avai_pids)
+            ind = self.pids.index(anchor_pid)
+            selected_pids = list(topk_index[ind])
+            selected_pids = [self.pids[i] for i in selected_pids]
+            selected_pids.append(anchor_pid)
+            remove = 0
+            avai_pids_rest = copy.deepcopy(avai_pids)
+            selected_pids_cp = copy.deepcopy(selected_pids)
+            for p in selected_pids_cp:
+                if p not in avai_pids:
+                    selected_pids.remove(p)
+                    remove += 1
+                else:
+                    avai_pids_rest.remove(p)
+            add_pids = random.sample(avai_pids_rest, remove)
+            del(avai_pids_rest)
+            del(selected_pids_cp)
+            selected_pids.extend(add_pids)
+            # assert len(selected_pids) == self.num_pids_per_batch
+            # selected_pids = random.sample(avai_pids, self.num_pids_per_batch)
+            for pid in selected_pids:
+                batch_idxs = batch_idxs_dict[pid].pop(0)
+                final_idxs.extend(batch_idxs)
+                if len(batch_idxs_dict[pid]) == 0:
+                    avai_pids.remove(pid)
+
+        self.logger.info('batch divide time: {:.2f}s'.format(time.time()-t0))
+        return iter(final_idxs)
+
+    def __len__(self):
+        return self.length
+    
+
+def euclidean_distance(qf, gf):
+    m = qf.shape[0]
+    n = gf.shape[0]
+    dist_mat = torch.pow(qf, 2).sum(dim=1, keepdim=True).expand(m, n) + \
+               torch.pow(gf, 2).sum(dim=1, keepdim=True).expand(n, m).t()
+    dist_mat.addmm_(1, -2, qf, gf.t())
+    return dist_mat
+
+def extract_batch_feature(model, inputs):
+    with torch.no_grad():
+        outputs = model(inputs.cuda())
+    outputs = outputs.cpu()
+    return outputs
+
+def extract_features(model, data_loader, verbose=False, logger=None):
+    fea_time = 0
+    data_time = 0
+    features = OrderedDict()
+    labels = OrderedDict()
+    end = time.time()
+
+    if verbose and logger:
+        logger.info('Feature extraction through model...')
+
+    model = model.cuda().eval()
+    with torch.no_grad():
+        for i, (imgs, pids, camids, others, fnames) in enumerate(data_loader):
+            data_time += time.time() - end
+            end = time.time()
+
+            # outputs, f = extract_cnn_feature(model, imgs)
+            outputs = extract_batch_feature(model, imgs)
+            for fname, output, pid in zip(fnames, outputs, pids):
+                features[fname] = output
+                labels[fname] = pid
+
+            fea_time += time.time() - end
+            end = time.time()
+    model = model.train()
+
+    if verbose and logger:
+        logger.info('Feature time: {:.3f} seconds. Data time: {:.3f} seconds.'.format(fea_time, data_time))
+
+    return features, labels

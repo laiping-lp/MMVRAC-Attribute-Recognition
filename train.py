@@ -77,8 +77,9 @@ if __name__ == '__main__':
 
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID
 
+    model = make_model(cfg, cfg.MODEL.NAME, 619) ## uavhuman 619
     # build DG train loader
-    train_loader, num_domains, num_pids = build_reid_train_loader(cfg)
+    train_loader, num_domains, num_pids = build_reid_train_loader(cfg, model)
     cfg.defrost()
     cfg.DATASETS.NUM_DOMAINS = num_domains
     cfg.freeze()
@@ -86,11 +87,9 @@ if __name__ == '__main__':
     val_name = cfg.DATASETS.TEST[0]
     _, _, val_loader, num_query = build_reid_test_loader(cfg, val_name)
     num_classes = len(train_loader.dataset.pids)
-    model_name = cfg.MODEL.NAME
 
     loss_func, center_criterion = build_loss(cfg, num_classes=num_classes)
 
-    model = make_model(cfg, model_name, num_classes)
     if cfg.MODEL.FREEZE_PATCH_EMBED and 'resnet' not in cfg.MODEL.NAME: # trick from moco v3
         model.base.patch_embed.proj.weight.requires_grad = False
         model.base.patch_embed.proj.bias.requires_grad = False

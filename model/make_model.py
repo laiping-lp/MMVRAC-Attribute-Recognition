@@ -29,6 +29,7 @@ __factory_T_type = {
     "only_attr_vit_base_patch16_224_TransReID":only_attr_vit_base_patch16_224_TransReID,
     "only_attr_vit_large_patch16_224_TransReID":only_attr_vit_large_patch16_224_TransReID,
 }
+factory = __factory_T_type
 
 def shuffle_unit(features, shift, group, begin=1):
 
@@ -73,7 +74,7 @@ def weights_init_classifier(m):
 
 
 class Backbone(nn.Module):
-    def __init__(self, model_name, num_classes, cfg, num_cls_dom_wise=None):
+    def __init__(self, model_name, num_classes, cfg, num_cls_dom_wise=None, path=None):
         super(Backbone, self).__init__()
         last_stride = cfg.MODEL.LAST_STRIDE
         model_path = cfg.MODEL.PRETRAIN_PATH
@@ -131,8 +132,12 @@ class Backbone(nn.Module):
             #     drop_path_rate=cfg.MODEL.DROP_PATH,
             #     drop_rate= cfg.MODEL.DROP_OUT,
             #     attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
-            self.base.load_param(model_path)
-            print('Loading pretrained ImageNet model......from {}'.format(model_path))
+            if path:
+                self.load_param(path)
+                print('Loading trained model......from {}'.format(path))
+            else:
+                self.base.load_param(model_path)
+                print('Loading pretrained ImageNet model......from {}'.format(model_path))
 
         # self.pool = nn.Linear(in_features=16*8, out_features=1, bias=False)
 
@@ -365,20 +370,21 @@ in_plane_dict = {
     'deit_small_patch16_224_prompt_vit': 384,
     'deit_tiny_patch16_224_prompt_vit': 192,
     'attr_vit_large_patch16_224_TransReID':1024,
+    'attr_vit_small_patch16_224_TransReID':768,
 }
 
 class build_vit(nn.Module):
-    def __init__(self, num_classes, cfg, factory, num_cls_dom_wise=None):
+    def __init__(self, num_classes, cfg, model_name, num_cls_dom_wise=None, pretrain_choice='imagenet', model_path=None):
         super().__init__()
         self.cfg = cfg
-        model_path = cfg.MODEL.PRETRAIN_PATH
+        model_path_base = cfg.MODEL.PRETRAIN_PATH
         
-        self.pretrain_choice = cfg.MODEL.PRETRAIN_CHOICE
+        self.pretrain_choice = pretrain_choice
         self.cos_layer = cfg.MODEL.COS_LAYER
         self.neck = cfg.MODEL.NECK
         self.neck_feat = cfg.TEST.NECK_FEAT
-        if cfg.MODEL.TRANSFORMER_TYPE in in_plane_dict:
-            self.in_planes = in_plane_dict[cfg.MODEL.TRANSFORMER_TYPE]
+        if model_name in in_plane_dict:
+            self.in_planes = in_plane_dict[model_name]
         else:
             print("===== unknown transformer type =====")
             self.in_planes = 768
@@ -389,22 +395,26 @@ class build_vit(nn.Module):
         self.num_classes = num_classes
 
         if self.pretrain_choice == 'imagenet':
-            self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
+            self.base = __factory_T_type[model_name]\
                 (img_size=cfg.INPUT.SIZE_TRAIN,
                 stride_size=cfg.MODEL.STRIDE_SIZE,
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
         elif self.pretrain_choice == 'LUP':
-            self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
+            self.base = __factory_T_type[model_name]\
                 (img_size=cfg.INPUT.SIZE_TRAIN,
                 stride_size=cfg.MODEL.STRIDE_SIZE,
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE,
                 stem_conv=True)
-        self.model_path = model_path
-        self.base.load_param(self.model_path)
+        if model_path:
+            self.model_path = model_path
+            self.load_param(model_path)
+        else:
+            self.model_path = model_path_base
+            self.base.load_param(self.model_path)
         print('Loading pretrained model......from {}'.format(self.model_path))
             # path = lup_path_name[cfg.MODEL.TRANSFORMER_TYPE]
             # self.model_path = os.path.join(model_path_base, path)
@@ -475,17 +485,17 @@ class build_vit(nn.Module):
         logger.info("Number of parameter: %.2fM" % (total/1e6))
 
 class build_attr_vit(nn.Module):
-    def __init__(self, num_classes, cfg, factory):
+    def __init__(self, num_classes, cfg, model_name, pretrain_choice='imagenet', stride_size=16, model_path=None):
         super().__init__()
         self.cfg = cfg
         model_path_base = cfg.MODEL.PRETRAIN_PATH
         
-        self.pretrain_choice = cfg.MODEL.PRETRAIN_CHOICE
+        self.pretrain_choice = pretrain_choice
         self.cos_layer = cfg.MODEL.COS_LAYER
         self.neck = cfg.MODEL.NECK
         self.neck_feat = cfg.TEST.NECK_FEAT
-        if cfg.MODEL.TRANSFORMER_TYPE in in_plane_dict:
-            self.in_planes = in_plane_dict[cfg.MODEL.TRANSFORMER_TYPE]
+        if model_name in in_plane_dict:
+            self.in_planes = in_plane_dict[model_name]
         else:
             print("===== unknown transformer type =====")
             self.in_planes = 768
@@ -496,25 +506,29 @@ class build_attr_vit(nn.Module):
         self.num_classes = num_classes
 
         if self.pretrain_choice == 'imagenet':
-            self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
+            self.base = factory[model_name]\
                 (img_size=cfg.INPUT.SIZE_TRAIN,
-                stride_size=cfg.MODEL.STRIDE_SIZE,
+                stride_size=stride_size,
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE,
                 has_attr_emb=cfg.MODEL.HAS_ATTRIBUTE_EMBEDDING)
         elif self.pretrain_choice == 'LUP':
-            self.base = factory[cfg.MODEL.TRANSFORMER_TYPE]\
+            self.base = factory[model_name]\
                 (img_size=cfg.INPUT.SIZE_TRAIN,
-                stride_size=cfg.MODEL.STRIDE_SIZE,
+                stride_size=stride_size,
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE,
                 stem_conv=True,
                 has_attr_emb=cfg.MODEL.HAS_ATTRIBUTE_EMBEDDING)
-        self.model_path = model_path_base
         # import ipdb; ipdb.set_trace()
-        self.base.load_param(self.model_path)
+        if model_path:
+            self.model_path = model_path
+            self.load_param(model_path)
+        else:
+            self.model_path = model_path_base
+            self.base.load_param(self.model_path)
         print('Loading pretrained model......from {}'.format(self.model_path))
             
         #### original one
@@ -548,7 +562,7 @@ class build_attr_vit(nn.Module):
             score = self.attr_head[i](attr_tokens[:, i])
             attr_scores.append(score)
 
-        # import ipdb; ipdb.set_trace() 
+        # import ipdb; ipdb.set_trace()
 
         if self.training:
             ### original
@@ -940,14 +954,15 @@ class build_only_attr_vit_cls(nn.Module):
  
 
 def make_model(cfg, modelname, num_class, num_class_domain_wise=None):
+    pretrain_choice = cfg.MODEL.PRETRAIN_CHOICE
     if modelname == 'vit':
-        model = build_vit(num_class, cfg, __factory_T_type, num_class_domain_wise)
+        model = build_vit(num_class, cfg, modelname, num_class_domain_wise, pretrain_choice)
         print('===========building vit===========')
     elif modelname == 'local_vit':
         model = build_transformer_local(num_class,cfg,__factory_T_type)
         print('===========building vit with JPM===========')
     elif modelname == 'attr_vit':
-        model = build_attr_vit(num_class, cfg, __factory_T_type)
+        model = build_attr_vit(num_class, cfg, modelname, pretrain_choice)
         print('===========building attr_vit===========')
     elif modelname == 'attr_vit_only_cls':
         model = build_attr_vit_V2(num_class, cfg, __factory_T_type)
