@@ -16,7 +16,7 @@ Note that, all experiments are conducted using single GPU: NVIDIA Titan RTX.
 Modify the paths and settings in config/uavhuman.yml, then
 
 ```
-python train.py --config_file config/#your_config_name#.yml
+python train.py --config_file config/#your_config_name#.yml   
 ```
 
 ### 3. evaluation
