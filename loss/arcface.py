@@ -18,7 +18,7 @@ class ArcFace(nn.Module):
         self.th = math.cos(math.pi - m)
         self.mm = math.sin(math.pi - m) * m
 
-        self.weight = Parameter(torch.Tensor(out_features, in_features))
+        self.weight = Parameter(torch.Tensor(12, out_features).cuda())
         if bias:
             self.bias = Parameter(torch.Tensor(out_features))
         else:
@@ -33,21 +33,40 @@ class ArcFace(nn.Module):
             nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, input, label):
-        cosine = F.linear(F.normalize(input), F.normalize(self.weight))
-        sine = torch.sqrt((1.0 - torch.pow(cosine, 2)).clamp(0, 1))
+        cosine = F.linear(F.normalize(input), F.normalize(self.weight))        
+        cosine = cosine.clamp(-1 + 1e-7, 1 - 1e-7)
+        sine = torch.sqrt((1.0 - torch.pow(cosine, 2)).clamp(0 + 1e-7, 1 - 1e-7))
         phi = cosine * self.cos_m - sine * self.sin_m
         phi = torch.where(cosine > self.th, phi, cosine - self.mm)
         # --------------------------- convert label to one-hot ---------------------------
         # one_hot = torch.zeros(cosine.size(), requires_grad=True, device='cuda')
-        one_hot = torch.zeros(cosine.size(), device='cuda')
+        one_hot = torch.zeros((64,12), device='cuda')
         one_hot.scatter_(1, label.view(-1, 1).long(), 1)
+        # import ipdb;ipdb.set_trace()
         # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
         output = (one_hot * phi) + (
                     (1.0 - one_hot) * cosine)  # you can use torch.where if your torch.__version__ is 0.4
         output *= self.s
+        # label = torch.tensor([ 1,  2,  2,  2,  2,  2,  2,  2, 10, 10, 10, 10,  2,  2,  2,  2,  2,  2,
+        #  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  3,  3,  3,  3,  3,  3,  3,  3,
+        #  9,  9,  9,  9,  2,  2,  2,  2,  3,  3,  3,  3,  2,  2,  2,  2,  2,  2,
+        #  2,  2,  2,  2,  2,  2,  2,  2,  2,  2], device='cuda:0')
+        # loss = F.cross_entropy(output, label)
         # print(output)
+        # log_probs = nn.functional.log_softmax(output, dim=1)
+        # loss = nn.functional.nll_loss(log_probs, label)
+        log_probs = F.log_softmax(output, dim=0)  # 应用 LogSoftmax 函数
+        # loss = F.nll_loss(log_probs, label)  # 使用负对数似然损失函数
+        loss = -one_hot * log_probs
+        # loss = sum([l.mean(0).sum() for l in loss])
+        loss_sum = 0.0
+        for l in loss:
+            if l[6] != 0:
+                loss_sum += l.mean(0).sum()
 
-        return output
+        # import ipdb;ipdb.set_trace()
+
+        return loss_sum
 
 class CircleLoss(nn.Module):
     def __init__(self, in_features, num_classes, s=256, m=0.25):
@@ -78,3 +97,4 @@ class CircleLoss(nn.Module):
         pred_class_logits = targets * s_p + (1.0 - targets) * s_n
 
         return pred_class_logits
+    

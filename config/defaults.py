@@ -35,13 +35,6 @@ _C.MODEL.DIM = 768
 # Path to pretrained model of backbone
 _C.MODEL.PRETRAIN_PATH = ""
 
-# JPM
-_C.MODEL.JPM = False
-_C.MODEL.SHIFT_NUM = 5
-_C.MODEL.SHUFFLE_GROUP = 2
-_C.MODEL.DEVIDE_LENGTH = 4
-_C.MODEL.RE_ARRANGE = True
-
 # Use ImageNet pretrained model to initialize backbone or use self trained model to initialize the whole model
 # Options: 'imagenet' , 'self' , 'finetune'
 _C.MODEL.PRETRAIN_CHOICE = 'imagenet'
@@ -54,8 +47,6 @@ _C.MODEL.IF_WITH_CENTER = 'no'
 _C.MODEL.ID_LOSS_TYPE = 'softmax'
 _C.MODEL.ID_LOSS_WEIGHT = 1.0
 _C.MODEL.TRIPLET_LOSS_WEIGHT = 1.0
-_C.MODEL.ATTRIBUTE_LOSS_WEIGHT = 1.0
-_C.MODEL.HAS_ATTRIBUTE_EMBEDDING = False
 #### for clipreid
 _C.MODEL.I2T_LOSS_WEIGHT = 1.0
 
@@ -317,16 +308,12 @@ _C.TEST = CN()
 _C.TEST.IMS_PER_BATCH = 128
 # If test with re-ranking, options: 'True','False'
 _C.TEST.RE_RANKING = False
-# If test with query aggregation, options: 'True','False'
-_C.TEST.QUERY_AGGREGATE = False
 # Path to trained model
 _C.TEST.WEIGHT = ""
 # Which feature of BNNeck to be used for test, before or after BNNneck, options: 'before' or 'after'
 _C.TEST.NECK_FEAT = 'after'
 # Whether feature is nomalized before test, if yes, it is equivalent to cosine distance
 _C.TEST.FEAT_NORM = True
-# If test attribute recognition options: "True" , "False"
-_C.TEST.ATTRIBUTE_RECOGNITION = False
 
 # Name for saving the distmat after testing.
 _C.TEST.DIST_MAT = "dist_mat.npy"

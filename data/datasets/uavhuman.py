@@ -9,7 +9,6 @@
 
 import glob
 import re
-import json
 
 import os.path as osp
 
@@ -111,13 +110,13 @@ class UAVHuman(ImageDataset):
 
             pid_container.add(pid)
         # pid2label = {pid: label for label, pid in enumerate(pid_container)}
-            
-
-        ###### predict attributes ######
-        with open("/home/liyuke/data4/uavhuman-reid/pre_test_attrs.json", 'r') as f:
-            pre_attrs = json.load(f)
-        ###### predict attributes ######
-
+        gender_number_list = [0] * 2
+        backpack_number_list = [0] * 5
+        hat_number_list = [0] * 5
+        UCC_number_list = [0] * 12
+        UCS_number_list = [0] * 4
+        LCC_number_list = [0] * 12
+        LCS_number_list = [0] * 4
         dataset = []
         for img_path in img_paths:
             fname = osp.split(img_path)[-1]
@@ -132,6 +131,61 @@ class UAVHuman(ImageDataset):
                 camid = int(camid_part1 + camid_part2)
             if pid == -1: continue  # junk images are just ignored
             if is_train:
+                pid = self.dataset_name + "_" + str(pid)
+                # attributes infos
+                gender = int(pattern_gender.search(fname).groups()[0][0]) - 1 # 0: n/a; 1: male; 2: female
+                # control gender male and female rate 
+                # if(gender == 0):
+                #     if(gender_number_list[0] > 3890):
+                #         continue
+                #     else:
+                #         gender_number_list[gender] += 1
+                # else:
+                #     gender_number_list[gender] += 1
+                backpack = int(pattern_backpack.search(fname).groups()[0][0])
+                if backpack == 5:
+                    backpack = 0 # 0: n/a; 1: red; 2: black; 3: green; 4: yellow; 5: n/a
+                # if(backpack == 0):
+                #     if(backpack_number_list[0] > 1000):
+                #         continue
+                #     else:
+                #         backpack_number_list[backpack] += 1
+                # else:
+                #     backpack_number_list[backpack] += 1
+                hat = int(pattern_hat.search(fname).groups()[0][0]) # 0: n/a; 1: red; 2: black; 3: yellow; 4: white; 5: n/a
+                if hat == 5:
+                    hat = 0
+                # if(hat == 0):
+                #     if(hat_number_list[0] > 1000):
+                #         continue
+                #     else:
+                #         hat_number_list[hat] += 1
+                # else:
+                #     hat_number_list[hat] += 1
+                upper_cloth = pattern_upper.search(fname).groups()[0]
+                upper_color = int(upper_cloth[:2]) # 0: n/a; 1: red; 2: black; 3: blue; 4: green; 5: multicolor; 6: grey; 7: white; 8: yellow; 9: dark brown; 10: purple; 11: pink
+                upper_style = int(upper_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt
+                lower_cloth = pattern_lower.search(fname).groups()[0]
+                lower_color = int(lower_cloth[:2]) # 0: n/a; 1: red; 2: black; 3: blue; 4: green; 5: multicolor; 6: grey; 7: white; 8: yellow; 9: dark brown; 10: purple; 11: pink
+                # if(upper_color == 6):
+                #     if(UCC_number_list[6] > 100):
+                #         continue
+                #     else:
+                #         UCC_number_list[upper_color] += 1
+                # else:
+                #     UCC_number_list[upper_color] += 1
+                lower_style = int(lower_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt
+                action = int(pattern_action.search(fname).groups()[0])
+                attributes = {
+                    "gender": gender,
+                    "backpack": backpack,
+                    "hat": hat,
+                    "upper_color": upper_color,
+                    "upper_style": upper_style,
+                    "lower_color": lower_color,
+                    "lower_style": lower_style
+                }
+            else:
                 pid = self.dataset_name + "_" + str(pid)
 
                 # attributes infos
@@ -158,12 +212,10 @@ class UAVHuman(ImageDataset):
                     "lower_color": lower_color,
                     "lower_style": lower_style
                 }
-            else:
-                # attributes = None
-                attributes = pre_attrs[img_path]
             # if relabel: pid = pid2label[pid] # relabel in common.py
             dataset.append((img_path, pid, camid, attributes))
-
+        # print(UCC_number_list)
+        print(hat_number_list)
         return dataset
 
     def get_imagedata_info(self, data):

@@ -48,27 +48,8 @@ def cosine_sim(qf, gf):
     dist_mat = np.arccos(dist_mat)
     return dist_mat
 
-##### only top-1 is modified
-def rerank_with_attr(indices, num_q, hats, backpacks):
-    print('=> Enter rerank with attributes')
-    q_hats, g_hats = hats[:num_q], hats[num_q:]
-    q_backpacks, g_backpacks = backpacks[:num_q], backpacks[num_q:]
-    for i, rank_list in enumerate(indices):
-        ## hats
-        hat = q_hats[i]
-        for j in range(len(rank_list)):
-            if g_hats[rank_list[j]] == hat:
-                rank_list[0], rank_list[j] = rank_list[j], rank_list[0]
-                break
-        ## backpacks
-        backpack = q_backpacks[i]
-        for j in range(len(rank_list)):
-            if g_backpacks[rank_list[j]] == backpack:
-                rank_list[0], rank_list[j] = rank_list[j], rank_list[0]
-                break
-    return indices
 
-def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=None, gallery=None, log_path=None,gen_result=False,hats=None,backpacks=None):
+def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=None, gallery=None, log_path=None,gen_result=False):
     """Evaluation with market1501 metric
         Key: for each query identity, its gallery images from the same camera view are discarded.
         """
@@ -80,13 +61,6 @@ def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=No
         max_rank = num_g
         print("Note: number of gallery samples is quite small, got {}".format(num_g))
     indices = np.argsort(distmat, axis=1)
-
-    #### reranking with attributes ####
-    hats = np.asarray([h.to('cpu') for h in hats])
-    backpacks = np.asarray([b.to('cpu') for b in backpacks])
-    indices = rerank_with_attr(indices, num_q, hats, backpacks)
-    #### reranking with attributes ####
-
     #  0 2 1 3
     #  1 2 3 0
     matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
@@ -140,20 +114,20 @@ def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=No
         # save query result
         file_path =  make_case_json(g_pids, query, gallery, indices, matches, log_path)
         # sort AP in ascending order, get last 2% data to analyse
-        AP_indices = np.argsort(all_AP) 
-        root_dir = log_path
-        gen_bad_case_img(root_dir, file_path, AP_indices, all_AP)
-        # random select case to analyse
-        np.random.seed(6)
-        random_AP_indices = np.random.permutation(AP_indices)
-        gen_random_case_img(root_dir,file_path,random_AP_indices,all_AP)
+        # AP_indices = np.argsort(all_AP) 
+        # root_dir = log_path
+        # gen_bad_case_img(root_dir, file_path, AP_indices, all_AP)
+        # # random select case to analyse
+        # np.random.seed(6)
+        # random_AP_indices = np.random.permutation(AP_indices)
+        # gen_random_case_img(root_dir,file_path,random_AP_indices,all_AP)
         print("done!")
 
     return all_cmc, mAP
 
 def make_case_json(g_pids, query, gallery,indices,matches, log_path):
     cases_data = []
-    for indexs,match,query in tqdm(zip(indices,matches,query)):
+    for (indexs,match,query) in tqdm(zip(indices,matches,query)):
         case = {
             "query_path" : "",
             "query_id": "", 
@@ -324,6 +298,7 @@ class R1_mAP_eval():
         # gallery
         gf = feats[self.num_query:]
         g_pids = np.asarray(self.pids[self.num_query:])
+        # import ipdb;ipdb.set_trace()
 
         g_camids = np.asarray(self.camids[self.num_query:])
         if self.reranking:
@@ -341,7 +316,7 @@ class R1_mAP_eval():
     
 
 class R1_mAP_eval_ensemble():
-    def __init__(self, num_query, max_rank=50,  feat_norm=True, reranking=False, query_aggregate=False, feature_aggregate=False, query=None, gallery=None, log_path=None,gen_result=False, num_models=1, threshold=0):
+    def __init__(self, num_query, max_rank=50,  feat_norm=True, reranking=False, query_aggregate=False, feature_aggregate=False, query=None, gallery=None, log_path=None,gen_result=False, num_models=1):
         super(R1_mAP_eval_ensemble, self).__init__()
         self.num_query = num_query
         self.max_rank = max_rank
@@ -356,25 +331,18 @@ class R1_mAP_eval_ensemble():
         self.feature_aggregate = feature_aggregate
         self.gen_result = gen_result
         self.num_models = num_models
-        self.threshold = threshold
 
     def reset(self):
         self.feats = [[] for _ in range(self.num_models)]
         self.pids = []
         self.camids = []
-        self.resolutions = []
-        self.hat = []
-        self.backpack = []
 
     def update(self, output):  # called once for each batch
-        feats, pid, camid, resolutions, attrs = output
+        feats, pid, camid = output
         for i, feat in enumerate(feats):
             self.feats[i].append(feat.cpu())
         self.pids.extend(np.asarray(pid))
         self.camids.extend(np.asarray(camid))
-        self.resolutions.extend(np.asarray(resolutions))
-        self.hat.extend(attrs['hat'])
-        self.backpack.extend(attrs['backpack'])
 
     def compute(self):  # called after each epoch
         # import ipdb
@@ -390,7 +358,6 @@ class R1_mAP_eval_ensemble():
                 qf = feat_aggregate(qf, q_pids)
             q_pids = np.asarray(self.pids[:self.num_query])
             q_camids = np.asarray(self.camids[:self.num_query])
-            q_resolutions = np.asarray(self.resolutions[:self.num_query])
             # gallery
             gf = feat[self.num_query:]
             g_pids = np.asarray(self.pids[self.num_query:])
@@ -406,41 +373,26 @@ class R1_mAP_eval_ensemble():
                 
             ##### key operation of ensemble
             distmats.append(distmat)
-
-        ##### key operation of ensemble
+        ##### key operation of ensemble 
         distmat = np.mean(distmats, axis=0)
-        # distmat = 0.2*distmats[0] + 0.6*distmats[1] + 0.2*distmats[2]
+        # distmat = 0.9*distmats[0] + 0.1*distmats[1]
         
         
         if self.query_aggregate:
-            distmat = query_aggregate(distmat, q_pids, q_resolutions, self.threshold)
+            distmat = query_aggregate(distmat, q_pids)
             
-        cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result, hats=self.hat, backpacks=self.backpack)
+        cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result)
 
         return cmc, mAP, distmat, self.pids, self.camids, qf, gf
 
 
-def query_aggregate(distmat, q_pids, resolution=None, threshold=0):
+
+def query_aggregate(distmat, q_pids):
     print('=> Enter query aggregation')
-    if threshold > 0 and resolution is not None:
-        low_res_inds = np.argwhere(np.array(resolution) < threshold).squeeze()
-        print("low resolution queries")
     uniq_ids = np.unique(q_pids)
     for pid in uniq_ids:
         indexs = np.argwhere(q_pids==pid).squeeze()
-        weights = [1/len(indexs) for _ in indexs]
-        if threshold > 0 and resolution is not None:
-            cnt = 0
-            for i, ind in enumerate(indexs):
-                if ind in low_res_inds:
-                    weights[i] = 0
-                    cnt += 1
-            if cnt == len(indexs):
-                print("all low: {}".format(pid))
-                weights = [1/len(indexs) for _ in indexs]
-
-        # avg_dist = np.mean(distmat[indexs], axis=0)
-        avg_dist = sum([distmat[indexs[ind]]*w for ind, w in enumerate(weights)])
+        avg_dist = np.mean(distmat[indexs], axis=0)
         distmat[indexs] = avg_dist
 
     return distmat

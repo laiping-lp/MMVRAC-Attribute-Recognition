@@ -10,10 +10,15 @@ from model.make_model import make_model
 from processor.inf_processor import do_inference, do_inference_multi_targets,do_inference_only_attr
 from utils.meter import AverageMeter
 from utils.metrics import R1_mAP_eval
+from loss.center_loss import CenterLoss
+from loss.center_loss_attr import CenterLossAttr
+from loss.L_softmax_loss import LSoftMaxLoss
+from loss.arcface import ArcFace
 from torch.cuda import amp
 import torch.distributed as dist
 from data.build_DG_dataloader import build_reid_test_loader, build_reid_train_loader
 from torch.utils.tensorboard import SummaryWriter
+from prettytable import PrettyTable
 
 def attr_vit_do_train_with_amp(cfg,
              model,
@@ -64,15 +69,29 @@ def attr_vit_do_train_with_amp(cfg,
     bs = cfg.SOLVER.IMS_PER_BATCH # altered by lyk
     num_ins = cfg.DATALOADER.NUM_INSTANCE
     classes = len(train_loader.dataset.pids)
-    center_weight = cfg.SOLVER.CENTER_LOSS_WEIGHT
-    id_weight = cfg.MODEL.ID_LOSS_WEIGHT
-    tri_weight = cfg.MODEL.TRIPLET_LOSS_WEIGHT
-    attr_weight = cfg.MODEL.ATTRIBUTE_LOSS_WEIGHT
+    center_weight_attr = cfg.SOLVER.CENTER_LOSS_WEIGHT
+    center_weight = 0.0005
 
     best = 0.0
-    best_attr = 0.0
+    # best_attr = 0.0
     best_index = 1
-    best_attr_index = 1
+    # best_attr_index = 1
+    best_attr = [0.0] * 7
+    best_attr_index = [1] * 7
+    name = ['Gender','Backpack','Hat','UCC','UCS',"LCC",'LCS']
+    margin = cfg.SOLVER.MARGIN
+    if_logsoftmax = False
+    # if_logsoftmax = True
+    if_logsoftmax_with_center_loss = False
+    # if_logsoftmax_with_center_loss = True
+    if_L_softmax = False
+    # if_L_softmax = True
+    if_only_UCC_center_loss = False
+    if_only_UCC_center_loss = True
+    center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
+    margin = cfg.SOLVER.MARGIN
+    lsoftmaxloss = LSoftMaxLoss(num_classes=12,margin=margin,scale=768)
+    arcface = ArcFace(in_features=64,out_features=768,m= margin)
     # train
     for epoch in range(1, epochs + 1):
         start_time = time.time()
@@ -112,10 +131,7 @@ def attr_vit_do_train_with_amp(cfg,
             model.to(device)
             with amp.autocast(enabled=True):
                 loss_tri_hard = torch.tensor(0.,device=device)
-                if cfg.MODEL.HAS_ATTRIBUTE_EMBEDDING:
-                    score, feat, attr_scores = model(img, attrs=attributes)
-                else:
-                    score, feat, attr_scores = model(img)
+                score, feat, attr_scores = model(img)
                 # import ipdb; ipdb.set_trace()
                 #### id loss
                 log_probs = nn.LogSoftmax(dim=1)(score)
@@ -133,10 +149,45 @@ def attr_vit_do_train_with_amp(cfg,
                     torch.zeros((bs, 4)).to(device).scatter_(1, attributes[6].unsqueeze(1), 1),
                     ]
                 # attr_targets = torch.tensor(attr_targets).to(device)
-                attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
-                loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
-                loss_attr = sum([l.mean(0).sum() for l in loss_attr])
+                # attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
+                # loss_center_attr =  center_criterion_attr(feat,attributes[5])
+                # lsoftmax_loss_attr = lsoftmaxloss(feat,attributes[5],attr_targets[5],distance_scale=3)
+                # loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
+                # loss_attr = sum([l.mean(0).sum() for l in loss_attr])
+                # loss_attr += loss_center_attr * 0.05
+                # loss_attr += lsoftmax_loss_attr
                 # import ipdb; ipdb.set_trace()
+                if if_logsoftmax:
+                    attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
+                    loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
+                    loss_attr = sum([l.mean(0).sum() for l in loss_attr])
+                elif if_logsoftmax_with_center_loss:
+                    # print("======> logsoftmax")
+                    attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
+                    loss_center_attr =  center_criterion_attr(feat,attributes[5])   
+                    loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
+                    loss_attr = sum([l.mean(0).sum() for l in loss_attr])
+                    loss_attr += loss_center_attr * center_weight_attr
+                elif if_L_softmax:
+                    # print("=====> L-SoftMax")
+                    # import ipdb;ipdb.set_trace()
+                    # lambd = cfg.SOLVER.LAMDB
+                    # lsoftmax_loss_attr = lsoftmaxloss(feat,attributes[5],attr_targets[5],distance_scale=4)
+                    # l_arcface_loss = 0.0
+                    # for i in range(7):
+                    l_arcface_loss = arcface(feat,attributes[5])
+                    attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
+                    loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
+                    loss_attr = sum([l.mean(0).sum() for l in loss_attr])
+                    loss_attr += l_arcface_loss
+                elif if_only_UCC_center_loss:
+                    attr_log_probs = nn.LogSoftmax(dim=1)(attr_scores[3])  # attr
+                    loss_center_attr =  center_criterion_attr(feat,attributes[3])  
+
+                    loss_attr = -attr_targets[3] * attr_log_probs[3]
+                    loss_attr = sum([l.mean(0).sum() for l in loss_attr])
+                    loss_attr += loss_center_attr * center_weight_attr
+                    # import ipdb;ipdb.set_trace()
 
                 #### triplet loss
                 # target = targets.max(1)[1] ###### for mixup
@@ -159,7 +210,7 @@ def attr_vit_do_train_with_amp(cfg,
                 else:
                     loss_center = torch.tensor(0.0, device=device)
 
-                loss = id_weight * loss_id + tri_weight * loss_tri + center_weight * loss_center + attr_weight * loss_attr
+                loss = loss_id + loss_tri + center_weight * loss_center + loss_attr
 
             scaler.scale(loss).backward()
 
@@ -168,7 +219,7 @@ def attr_vit_do_train_with_amp(cfg,
 
             if 'center' in cfg.MODEL.METRIC_LOSS_TYPE:
                 for param in center_criterion.parameters():
-                    param.grad.data *= (1. / cfg.SOLVER.CENTER_LOSS_WEIGHT)
+                    param.grad.data *= (1. / 0.0005)
                 scaler.step(optimizer_center)
                 scaler.update()
             if isinstance(score, list):
@@ -177,10 +228,10 @@ def attr_vit_do_train_with_amp(cfg,
                 acc = (score.max(1)[1] == target).float().mean()
 
             loss_meter.update(loss.item(), bs)
-            loss_id_meter.update(id_weight*loss_id.item(), bs)
-            loss_tri_meter.update(tri_weight*loss_tri.item(), bs)
+            loss_id_meter.update(loss_id.item(), bs)
+            loss_tri_meter.update(loss_tri.item(), bs)
             loss_center_meter.update(center_weight*loss_center.item(), bs)
-            loss_attr_meter.update(attr_weight*loss_attr.item(), bs)
+            loss_attr_meter.update(loss_attr.item(), bs)
             acc_meter.update(acc, 1)
 
             torch.cuda.synchronize()
@@ -201,11 +252,11 @@ def attr_vit_do_train_with_amp(cfg,
 
         log_path = os.path.join(cfg.LOG_ROOT, cfg.LOG_NAME)
 
-        if epoch % eval_period == 0:
+        if epoch % 5 == 0:
             if 'DG' in cfg.DATASETS.TEST[0]:
                 cmc, mAP = do_inference_multi_targets(cfg, model, num_query, logger)
             else:
-                cmc, mAP = do_inference(cfg, model, val_loader, num_query, attr_recognition=True)
+                cmc, mAP = do_inference(cfg, model, val_loader, num_query)
             tbWriter.add_scalar('val/Rank@1', cmc[0], epoch)
             tbWriter.add_scalar('val/mAP', mAP, epoch)
             torch.cuda.empty_cache()
@@ -213,29 +264,37 @@ def attr_vit_do_train_with_amp(cfg,
                 best = mAP + cmc[0]
                 best_index = epoch
                 logger.info("=====best epoch: {}=====".format(best_index))
-                if cfg.MODEL.DIST_TRAIN:
-                    if dist.get_rank() == 0:
-                        torch.save(model.state_dict(),
-                                os.path.join(log_path, cfg.MODEL.NAME + '_best.pth'))
+                # if cfg.MODEL.DIST_TRAIN:
+                #     if dist.get_rank() == 0:
+                #         torch.save(model.state_dict(),
+                #                 os.path.join(log_path, cfg.MODEL.NAME + '_best.pth'))
+                # else:
+                #     torch.save(model.state_dict(),
+                #             os.path.join(log_path, cfg.MODEL.NAME + '_best.pth'))
+        # The best model for attribute recognition is retained while training reid
+        if attr_recognition:
+            if epoch % eval_period == 0:
+                if 'DG' in cfg.DATASETS.TEST[0]:
+                    _, _ = do_inference_multi_targets(cfg, model, num_query, logger)
                 else:
-                    torch.save(model.state_dict(),
-                            os.path.join(log_path, cfg.MODEL.NAME + '_best.pth'))
-        # # The best model for attribute recognition is retained while training reid
-        # if attr_recognition:
-        #     if epoch % 1 == 0 and epoch <= 25:
-        #         accuracy_per_attribute = do_inference_only_attr(cfg, model, val_loader, num_query, attr_recognition=True)
-        #         if best_attr < sum(accuracy_per_attribute):
-        #             best_attr = sum(accuracy_per_attribute)
-        #             best_attr_index = epoch
-        #             logger.info("=====best epoch: {}=====".format(best_attr_index))
-        #             logger.info("=====best accuracy: {:.2%}=====".format(best_attr))
-        #             if cfg.MODEL.DIST_TRAIN:
-        #                 if dist.get_rank() == 0:
-        #                     torch.save(model.state_dict(),
-        #                             os.path.join(log_path,'attr_best.pth'))
-        #             else:
-        #                 torch.save(model.state_dict(),
-        #                         os.path.join(log_path, 'attr_best.pth'))
+                    accuracy_per_attribute = do_inference_only_attr(cfg, model, val_loader, num_query, attr_recognition=True)
+                for i in range(7):
+                    if(best_attr[i] < accuracy_per_attribute[i]):
+                        best_attr[i] = accuracy_per_attribute[i]
+                        best_attr_index[i] = epoch
+                        # if cfg.MODEL.DIST_TRAIN:
+                        #     if dist.get_rank() == 0:
+                        #         torch.save(model.state_dict(),
+                        #                 os.path.join(log_path, name[i] + '_best.pth'))
+                        # else:
+                        #     torch.save(model.state_dict(),
+                        #             os.path.join(log_path, name[i] + '_best.pth'))
+                table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
+                formatted_accuracy_per_attribute_best = ["{:.2%}".format(accuracy) for accuracy in best_attr]
+                table.add_row(["Attribute Recognition"] + formatted_accuracy_per_attribute_best)
+                table.add_row(["best epoch"] + best_attr_index)
+                logger.info('\n' + str(table))
+                logger.info("=====best accuracy: {:.2%}=====".format(sum(best_attr)))
         torch.cuda.empty_cache()
 
     # final evaluation
@@ -248,4 +307,4 @@ def attr_vit_do_train_with_amp(cfg,
     else:
         for testname in cfg.DATASETS.TEST:
             _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
-            do_inference(cfg, model, val_loader, num_query, query_aggregate=cfg.TEST.QUERY_AGGREGATE, reranking=cfg.TEST.RE_RANKING)
+            do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
