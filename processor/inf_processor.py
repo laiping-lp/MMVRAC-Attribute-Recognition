@@ -249,7 +249,7 @@ def do_inference_ensemble(cfg,
                     feat = outputs
                 feats.append(feat)
                 
-            evaluator.update((feats, pid, camids, resolutions))
+            evaluator.update((feats, pid, camids, resolutions, attrs))
             img_path_list.extend(imgpath)
 
     if attr_recognition:

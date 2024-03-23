@@ -396,15 +396,15 @@ class build_vit(nn.Module):
         self.gap = nn.AdaptiveAvgPool2d(1)
         self.num_classes = num_classes
 
-        if self.pretrain_choice == 'imagenet':
-            self.base = __factory_T_type[model_name]\
+        if self.pretrain_choice in ['imagenet', 'self']:
+            self.base = factory[model_name]\
                 (img_size=cfg.INPUT.SIZE_TRAIN,
                 stride_size=cfg.MODEL.STRIDE_SIZE,
                 drop_path_rate=cfg.MODEL.DROP_PATH,
                 drop_rate= cfg.MODEL.DROP_OUT,
                 attn_drop_rate=cfg.MODEL.ATT_DROP_RATE)
         elif self.pretrain_choice == 'LUP':
-            self.base = __factory_T_type[model_name]\
+            self.base = factory[model_name]\
                 (img_size=cfg.INPUT.SIZE_TRAIN,
                 stride_size=cfg.MODEL.STRIDE_SIZE,
                 drop_path_rate=cfg.MODEL.DROP_PATH,
@@ -414,6 +414,9 @@ class build_vit(nn.Module):
         if model_path:
             self.model_path = model_path
             self.load_param(model_path)
+        elif pretrain_choice == 'self':
+            self.model_path = model_path_base
+            self.load_param(model_path_base)
         else:
             self.model_path = model_path_base
             self.base.load_param(self.model_path)

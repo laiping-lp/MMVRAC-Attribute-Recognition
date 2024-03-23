@@ -48,8 +48,27 @@ def cosine_sim(qf, gf):
     dist_mat = np.arccos(dist_mat)
     return dist_mat
 
+##### only top-1 is modified
+def rerank_with_attr(indices, num_q, hats, backpacks):
+    print('=> Enter rerank with attributes')
+    q_hats, g_hats = hats[:num_q], hats[num_q:]
+    q_backpacks, g_backpacks = backpacks[:num_q], backpacks[num_q:]
+    for i, rank_list in enumerate(indices):
+        ## hats
+        hat = q_hats[i]
+        for j in range(len(rank_list)):
+            if g_hats[rank_list[j]] == hat:
+                rank_list[0], rank_list[j] = rank_list[j], rank_list[0]
+                break
+        ## backpacks
+        backpack = q_backpacks[i]
+        for j in range(len(rank_list)):
+            if g_backpacks[rank_list[j]] == backpack:
+                rank_list[0], rank_list[j] = rank_list[j], rank_list[0]
+                break
+    return indices
 
-def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=None, gallery=None, log_path=None,gen_result=False):
+def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=None, gallery=None, log_path=None,gen_result=False,hats=None,backpacks=None):
     """Evaluation with market1501 metric
         Key: for each query identity, its gallery images from the same camera view are discarded.
         """
@@ -61,6 +80,13 @@ def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=No
         max_rank = num_g
         print("Note: number of gallery samples is quite small, got {}".format(num_g))
     indices = np.argsort(distmat, axis=1)
+
+    #### reranking with attributes ####
+    hats = np.asarray([h.to('cpu') for h in hats])
+    backpacks = np.asarray([b.to('cpu') for b in backpacks])
+    indices = rerank_with_attr(indices, num_q, hats, backpacks)
+    #### reranking with attributes ####
+
     #  0 2 1 3
     #  1 2 3 0
     matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
@@ -337,14 +363,18 @@ class R1_mAP_eval_ensemble():
         self.pids = []
         self.camids = []
         self.resolutions = []
+        self.hat = []
+        self.backpack = []
 
     def update(self, output):  # called once for each batch
-        feats, pid, camid, resolutions = output
+        feats, pid, camid, resolutions, attrs = output
         for i, feat in enumerate(feats):
             self.feats[i].append(feat.cpu())
         self.pids.extend(np.asarray(pid))
         self.camids.extend(np.asarray(camid))
         self.resolutions.extend(np.asarray(resolutions))
+        self.hat.extend(attrs['hat'])
+        self.backpack.extend(attrs['backpack'])
 
     def compute(self):  # called after each epoch
         # import ipdb
@@ -385,10 +415,9 @@ class R1_mAP_eval_ensemble():
         if self.query_aggregate:
             distmat = query_aggregate(distmat, q_pids, q_resolutions, self.threshold)
             
-        cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result)
+        cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result, hats=self.hat, backpacks=self.backpack)
 
         return cmc, mAP, distmat, self.pids, self.camids, qf, gf
-
 
 
 def query_aggregate(distmat, q_pids, resolution=None, threshold=0):
