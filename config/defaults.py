@@ -226,6 +226,9 @@ _C.SOLVER.MARGIN = 0.3
 _C.SOLVER.CENTER_LR = 0.5
 # Balanced weight of center loss
 _C.SOLVER.CENTER_LOSS_WEIGHT = 0.0005
+# L-softmax MARGIN
+_C.SOLVER.L_MARGIN = 1
+
 
 # Settings of weight decay
 _C.SOLVER.WEIGHT_DECAY = 0.0005
@@ -308,12 +311,16 @@ _C.TEST = CN()
 _C.TEST.IMS_PER_BATCH = 128
 # If test with re-ranking, options: 'True','False'
 _C.TEST.RE_RANKING = False
+# If test with query aggregation, options: 'True','False'
+_C.TEST.QUERY_AGGREGATE = False
 # Path to trained model
 _C.TEST.WEIGHT = ""
 # Which feature of BNNeck to be used for test, before or after BNNneck, options: 'before' or 'after'
 _C.TEST.NECK_FEAT = 'after'
 # Whether feature is nomalized before test, if yes, it is equivalent to cosine distance
 _C.TEST.FEAT_NORM = True
+# If test attribute recognition options: "True" , "False"
+_C.TEST.ATTRIBUTE_RECOGNITION = False
 
 # Name for saving the distmat after testing.
 _C.TEST.DIST_MAT = "dist_mat.npy"

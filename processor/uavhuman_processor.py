@@ -79,7 +79,7 @@ def attr_vit_do_train_with_amp(cfg,
     best_attr = [0.0] * 7
     best_attr_index = [1] * 7
     name = ['Gender','Backpack','Hat','UCC','UCS',"LCC",'LCS']
-    margin = cfg.SOLVER.MARGIN
+    margin = cfg.SOLVER.L_MARGIN
     if_logsoftmax = False
     # if_logsoftmax = True
     if_logsoftmax_with_center_loss = False
@@ -89,7 +89,6 @@ def attr_vit_do_train_with_amp(cfg,
     if_only_UCC_center_loss = False
     if_only_UCC_center_loss = True
     center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
-    margin = cfg.SOLVER.MARGIN
     lsoftmaxloss = LSoftMaxLoss(num_classes=12,margin=margin,scale=768)
     arcface = ArcFace(in_features=64,out_features=768,m= margin)
     # train

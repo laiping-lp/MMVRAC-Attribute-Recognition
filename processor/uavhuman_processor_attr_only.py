@@ -91,7 +91,7 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
     if if_focal_loss:
         logger.info(f'focal loss parameters:  alpha: {alpha}, gamma: {gamma}, reduction: {reduction}, scale: {scale}')
     center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
-    margin = cfg.SOLVER.MARGIN
+    margin = cfg.SOLVER.L_MARGIN
     lsoftmaxloss = LSoftMaxLoss(num_classes=12,margin=margin,scale=768)
     arcface = ArcFace(in_features=64,out_features=768,m= margin)
     for epoch in range(1, epochs + 1):
