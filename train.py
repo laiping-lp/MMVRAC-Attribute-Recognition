@@ -21,8 +21,8 @@ import loss as Patchloss
 from model.extract_features import extract_features
 import collections
 import yaml
-# import os
-# os.environ['CUDA_LAUNCH_BLOCKING'] = '1' # 下面老是报错 shape 不一致
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1' # 下面老是报错 shape 不一致
 
 
 def set_seed(seed):
@@ -77,9 +77,9 @@ if __name__ == '__main__':
 
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID
 
-    model = make_model(cfg, cfg.MODEL.NAME, 619) ## uavhuman 619
     # build DG train loader
-    train_loader, num_domains, num_pids = build_reid_train_loader(cfg, model)
+    train_loader, num_domains, num_pids = build_reid_train_loader(cfg)
+    
     cfg.defrost()
     cfg.DATASETS.NUM_DOMAINS = num_domains
     cfg.freeze()
@@ -87,14 +87,11 @@ if __name__ == '__main__':
     val_name = cfg.DATASETS.TEST[0]
     _, _, val_loader, num_query = build_reid_test_loader(cfg, val_name)
     num_classes = len(train_loader.dataset.pids)
+    model_name = cfg.MODEL.NAME
 
     loss_func, center_criterion = build_loss(cfg, num_classes=num_classes)
 
-    if cfg.MODEL.FREEZE_PATCH_EMBED and 'resnet' not in cfg.MODEL.NAME: # trick from moco v3
-        model.base.patch_embed.proj.weight.requires_grad = False
-        model.base.patch_embed.proj.bias.requires_grad = False
-        print("====== freeze patch_embed for stability ======")
-
+    model = make_model(cfg, model_name, num_classes)
     optimizer, optimizer_center = make_optimizer(cfg, model, center_criterion)
 
     scheduler = create_scheduler(cfg, optimizer)
@@ -135,21 +132,6 @@ if __name__ == '__main__':
     elif "only_attribute_recognition" == cfg.MODEL.NAME:
         print("==========> only_attribute_recognition!")
         only_attribute_recognition_vit_do_train_with_amp(
-            cfg,
-            model,
-            center_criterion,
-            train_loader,
-            val_loader,
-            optimizer,
-            optimizer_center,
-            scheduler,
-            loss_func,
-            num_query, args.local_rank,
-            num_pids = num_pids,
-        )
-    else:
-        print("==========> resnet!")
-        ori_vit_do_train_with_amp(
             cfg,
             model,
             center_criterion,

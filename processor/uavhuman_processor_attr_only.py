@@ -67,7 +67,7 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
     bs = cfg.SOLVER.IMS_PER_BATCH # altered by lyk
     num_ins = cfg.DATALOADER.NUM_INSTANCE
     classes = len(train_loader.dataset.pids)
-    center_weight_attr = cfg.SOLVER.CENTER_LOSS_WEIGHT
+    center_weight_attr = cfg.LOSS.CENTER_LOSS_WEIGHT
     
     best = [0.0] * 7
     best_index = [1] * 7
@@ -78,20 +78,24 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
     gamma = 2.0
     scale = 1.0
     reduction = 'sum'
-    if_focal_loss = False
+    if_focal_loss = cfg.LOSS.FOCAL_LOSS
     # if_focal_loss = True
-    if_logsoftmax_with_center_loss = False
+    if_logsoftmax_with_center_loss = cfg.LOSS.LOGSOFTMAX_CENTER_LOSS
     # if_logsoftmax_with_center_loss = True
-    if_L_softmax = False   
-    # if_L_softmax = True
+    if_arcface = cfg.LOSS.ARCFACE 
+    if_LSoftmax_loss = cfg.LOSS.LSOFTMAX_LOSS
+    # if_arcface = True
     if_only_LCC_center_loss = False
     # if_only_LCC_center_loss = True
     if_only_UCC_center_loss = False
     # if_only_UCC_center_loss = True 
+    logger.info(f"if_focal_loss:{if_focal_loss}, if_logsoftmax_with_center_loss:{if_logsoftmax_with_center_loss}, if_arcface:{if_arcface}, if_LSoftmax_loss:{if_LSoftmax_loss}")
+    logger.info(f"if_only_LCC_center_loss:{if_only_LCC_center_loss},if_only_UCC_center_loss:{if_only_UCC_center_loss}")
     if if_focal_loss:
         logger.info(f'focal loss parameters:  alpha: {alpha}, gamma: {gamma}, reduction: {reduction}, scale: {scale}')
-    center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
-    margin = cfg.SOLVER.L_MARGIN
+    # center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
+    center_criterion_attr = CenterLoss(num_classes=12,feat_dim=768,use_gpu=True)
+    margin = cfg.LOSS.L_MARGIN
     lsoftmaxloss = LSoftMaxLoss(num_classes=12,margin=margin,scale=768)
     arcface = ArcFace(in_features=64,out_features=768,m= margin)
     for epoch in range(1, epochs + 1):
@@ -150,14 +154,14 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
                         # print("======> logsoftmax")
                         attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
                         # loss_center_attr =  center_criterion_attr(feat,attributes[5])  
-                        loss_center_attr =  center_criterion_attr(feat,attributes[3]) 
+                        loss_center_attr =  center_criterion_attr(feat,attributes[5]) 
 
                         loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
                         loss_attr = sum([l.mean(0).sum() for l in loss_attr])
                         loss_attr += loss_center_attr * center_weight_attr
                         #  
                         # import ipdb;ipdb.set_trace()
-                    elif if_L_softmax:
+                    elif if_arcface:
                         # print("=====> L-SoftMax")
                         # import ipdb;ipdb.set_trace()
                         # lambd = cfg.SOLVER.LAMDB
@@ -178,6 +182,13 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
                         # import ipdb;ipdb.set_trace()
                         # if(l_arcface_loss.item() != 0.0):
                         #     print("arcface_loss:",l_arcface_loss)
+                    elif if_LSoftmax_loss:
+                        # print("=====> L-SoftMax")
+                        lsoftmax_loss_attr = lsoftmaxloss(feat,attributes[5],attr_targets[5],distance_scale=3)
+                        attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
+                        loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
+                        loss_attr = sum([l.mean(0).sum() for l in loss_attr])
+                        loss_attr += lsoftmax_loss_attr
                     elif if_only_LCC_center_loss:
                         attr_log_probs = nn.LogSoftmax(dim=1)(attr_scores[5])  # attr
                         loss_center_attr =  center_criterion_attr(feat,attributes[5])  
@@ -243,7 +254,7 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
                         if dist.get_rank() == 0:
                             torch.save(model.state_dict(),
                                     os.path.join(log_path, name[i] + '_best.pth'))
-                    elif  i == 6:
+                    elif  i == 1 or i == 6:
                         torch.save(model.state_dict(),
                                 os.path.join(log_path, name[i] + '_best.pth'))
             table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
@@ -273,6 +284,7 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
     table.add_row(["best epoch"] + best_index)
     logger.info('\n' + str(table))
     logger.info("=====best accuracy: {:.2%}=====".format(sum(best)))
+    logger.info(f"=======save path: {log_path} =======")
     # logger.info("=====best epoch: {}=====".format(best_index))
     # logger.info("=====best accuracy: {:.2%}=====".format(best))
     # final evaluation

@@ -69,8 +69,8 @@ def attr_vit_do_train_with_amp(cfg,
     bs = cfg.SOLVER.IMS_PER_BATCH # altered by lyk
     num_ins = cfg.DATALOADER.NUM_INSTANCE
     classes = len(train_loader.dataset.pids)
-    center_weight_attr = cfg.SOLVER.CENTER_LOSS_WEIGHT
-    center_weight = 0.0005
+    center_weight_attr = cfg.LOSS.CENTER_LOSS_WEIGHT
+    center_weight = cfg.SOLVER.CENTER_LOSS_WEIGHT
 
     best = 0.0
     # best_attr = 0.0
@@ -79,15 +79,14 @@ def attr_vit_do_train_with_amp(cfg,
     best_attr = [0.0] * 7
     best_attr_index = [1] * 7
     name = ['Gender','Backpack','Hat','UCC','UCS',"LCC",'LCS']
-    margin = cfg.SOLVER.L_MARGIN
-    if_logsoftmax = False
-    # if_logsoftmax = True
-    if_logsoftmax_with_center_loss = False
+    margin = cfg.LOSS.L_MARGIN
+    if_logsoftmax_with_center_loss = cfg.LOSS.LOGSOFTMAX_CENTER_LOSS
     # if_logsoftmax_with_center_loss = True
-    if_L_softmax = False
-    # if_L_softmax = True
+    if_L_softmax = cfg.LOSS.LSOFTMAX_LOSS
     if_only_UCC_center_loss = False
-    if_only_UCC_center_loss = True
+    # if_only_UCC_center_loss = True 
+    logger.info(f"if_logsoftmax_with_center_loss:{if_logsoftmax_with_center_loss}, if_L_softmax: {if_L_softmax}")
+    logger.info(f"if_only_UCC_center_loss:{if_only_UCC_center_loss}")
     center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
     lsoftmaxloss = LSoftMaxLoss(num_classes=12,margin=margin,scale=768)
     arcface = ArcFace(in_features=64,out_features=768,m= margin)
@@ -135,6 +134,7 @@ def attr_vit_do_train_with_amp(cfg,
                 #### id loss
                 log_probs = nn.LogSoftmax(dim=1)(score)
                 targets = 0.9 * targets + 0.1 / classes # label smooth
+                # import ipdb;ipdb.set_trace()
                 loss_id = (- targets * log_probs).mean(0).sum()
 
                 #### attr loss
@@ -156,11 +156,8 @@ def attr_vit_do_train_with_amp(cfg,
                 # loss_attr += loss_center_attr * 0.05
                 # loss_attr += lsoftmax_loss_attr
                 # import ipdb; ipdb.set_trace()
-                if if_logsoftmax:
-                    attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
-                    loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
-                    loss_attr = sum([l.mean(0).sum() for l in loss_attr])
-                elif if_logsoftmax_with_center_loss:
+                
+                if if_logsoftmax_with_center_loss:
                     # print("======> logsoftmax")
                     attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
                     loss_center_attr =  center_criterion_attr(feat,attributes[5])   
@@ -169,16 +166,11 @@ def attr_vit_do_train_with_amp(cfg,
                     loss_attr += loss_center_attr * center_weight_attr
                 elif if_L_softmax:
                     # print("=====> L-SoftMax")
-                    # import ipdb;ipdb.set_trace()
-                    # lambd = cfg.SOLVER.LAMDB
-                    # lsoftmax_loss_attr = lsoftmaxloss(feat,attributes[5],attr_targets[5],distance_scale=4)
-                    # l_arcface_loss = 0.0
-                    # for i in range(7):
-                    l_arcface_loss = arcface(feat,attributes[5])
+                    lsoftmax_loss_attr = lsoftmaxloss(feat,attributes[5],attr_targets[5],distance_scale=3)
                     attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
                     loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
                     loss_attr = sum([l.mean(0).sum() for l in loss_attr])
-                    loss_attr += l_arcface_loss
+                    loss_attr += lsoftmax_loss_attr
                 elif if_only_UCC_center_loss:
                     attr_log_probs = nn.LogSoftmax(dim=1)(attr_scores[3])  # attr
                     loss_center_attr =  center_criterion_attr(feat,attributes[3])  
@@ -187,6 +179,11 @@ def attr_vit_do_train_with_amp(cfg,
                     loss_attr = sum([l.mean(0).sum() for l in loss_attr])
                     loss_attr += loss_center_attr * center_weight_attr
                     # import ipdb;ipdb.set_trace()
+                else:
+                    attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
+                    loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
+                    loss_attr = sum([l.mean(0).sum() for l in loss_attr])
+
 
                 #### triplet loss
                 # target = targets.max(1)[1] ###### for mixup
@@ -281,13 +278,13 @@ def attr_vit_do_train_with_amp(cfg,
                     if(best_attr[i] < accuracy_per_attribute[i]):
                         best_attr[i] = accuracy_per_attribute[i]
                         best_attr_index[i] = epoch
-                        # if cfg.MODEL.DIST_TRAIN:
-                        #     if dist.get_rank() == 0:
-                        #         torch.save(model.state_dict(),
-                        #                 os.path.join(log_path, name[i] + '_best.pth'))
-                        # else:
-                        #     torch.save(model.state_dict(),
-                        #             os.path.join(log_path, name[i] + '_best.pth'))
+                        if cfg.MODEL.DIST_TRAIN:
+                            if dist.get_rank() == 0:
+                                torch.save(model.state_dict(),
+                                        os.path.join(log_path, name[i] + '_best.pth'))
+                        elif i == 3:
+                            torch.save(model.state_dict(),
+                                    os.path.join(log_path, name[i] + '_best.pth'))
                 table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
                 formatted_accuracy_per_attribute_best = ["{:.2%}".format(accuracy) for accuracy in best_attr]
                 table.add_row(["Attribute Recognition"] + formatted_accuracy_per_attribute_best)
@@ -295,15 +292,22 @@ def attr_vit_do_train_with_amp(cfg,
                 logger.info('\n' + str(table))
                 logger.info("=====best accuracy: {:.2%}=====".format(sum(best_attr)))
         torch.cuda.empty_cache()
-
-    # final evaluation
-    load_path = os.path.join(log_path, cfg.MODEL.NAME + '_best.pth')
-    # eval_model = make_model(cfg, modelname=cfg.MODEL.NAME, num_class=0)
-    model.load_param(load_path)
-    logger.info('load weights from best.pth')
-    if 'DG' in cfg.DATASETS.TEST[0]:
-        do_inference_multi_targets(cfg, model, logger)
-    else:
-        for testname in cfg.DATASETS.TEST:
-            _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
-            do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
+    
+    table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
+    formatted_accuracy_per_attribute_best = ["{:.2%}".format(accuracy) for accuracy in best_attr]
+    table.add_row(["Attribute Recognition"] + formatted_accuracy_per_attribute_best)
+    table.add_row(["best epoch"] + best_index)
+    logger.info('\n' + str(table))
+    logger.info("=====best accuracy: {:.2%}=====".format(sum(best)))
+    logger.info(f"=======save path: {log_path} =======")
+    # # final evaluation
+    # load_path = os.path.join(log_path, cfg.MODEL.NAME + '_best.pth')
+    # # eval_model = make_model(cfg, modelname=cfg.MODEL.NAME, num_class=0)
+    # model.load_param(load_path)
+    # logger.info('load weights from best.pth')
+    # if 'DG' in cfg.DATASETS.TEST[0]:
+    #     do_inference_multi_targets(cfg, model, logger)
+    # else:
+    #     for testname in cfg.DATASETS.TEST:
+    #         _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
+    #         do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)

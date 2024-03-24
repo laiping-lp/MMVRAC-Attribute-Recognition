@@ -136,7 +136,7 @@ class UAVHuman(ImageDataset):
                 gender = int(pattern_gender.search(fname).groups()[0][0]) - 1 # 0: n/a; 1: male; 2: female
                 # control gender male and female rate 
                 # if(gender == 0):
-                #     if(gender_number_list[0] > 3890):
+                #     if(gender_number_list[0] > 1288):
                 #         continue
                 #     else:
                 #         gender_number_list[gender] += 1
@@ -167,13 +167,13 @@ class UAVHuman(ImageDataset):
                 upper_style = int(upper_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt
                 lower_cloth = pattern_lower.search(fname).groups()[0]
                 lower_color = int(lower_cloth[:2]) # 0: n/a; 1: red; 2: black; 3: blue; 4: green; 5: multicolor; 6: grey; 7: white; 8: yellow; 9: dark brown; 10: purple; 11: pink
-                # if(upper_color == 6):
-                #     if(UCC_number_list[6] > 100):
+                # if(lower_color == 6):
+                #     if(LCC_number_list[6] > 100):
                 #         continue
                 #     else:
-                #         UCC_number_list[upper_color] += 1
+                #         LCC_number_list[lower_color] += 1
                 # else:
-                #     UCC_number_list[upper_color] += 1
+                #     LCC_number_list[lower_color] += 1
                 lower_style = int(lower_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt
                 action = int(pattern_action.search(fname).groups()[0])
                 attributes = {
@@ -215,7 +215,7 @@ class UAVHuman(ImageDataset):
             # if relabel: pid = pid2label[pid] # relabel in common.py
             dataset.append((img_path, pid, camid, attributes))
         # print(UCC_number_list)
-        print(hat_number_list)
+        print(gender_number_list)
         return dataset
 
     def get_imagedata_info(self, data):

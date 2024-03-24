@@ -226,8 +226,7 @@ _C.SOLVER.MARGIN = 0.3
 _C.SOLVER.CENTER_LR = 0.5
 # Balanced weight of center loss
 _C.SOLVER.CENTER_LOSS_WEIGHT = 0.0005
-# L-softmax MARGIN
-_C.SOLVER.L_MARGIN = 1
+
 
 
 # Settings of weight decay
@@ -336,3 +335,14 @@ _C.LOG_ROOT = ""
 _C.TB_LOG_ROOT = ""
 # log dir name
 _C.LOG_NAME = ""
+
+_C.LOSS = CN()
+# extra loss function
+_C.LOSS.FOCAL_LOSS = False
+_C.LOSS.LOGSOFTMAX_CENTER_LOSS = False
+_C.LOSS.ARCFACE = False
+_C.LOSS.LSOFTMAX_LOSS = False
+_C.LOSS.CENTER_LOSS_WEIGHT = 0.005 ## just for attr center_loss
+# L-softmax MARGIN
+_C.LOSS.L_MARGIN = 1
+

@@ -35,7 +35,7 @@ class LSoftMaxLoss(nn.Module):
         output = (one_hot * phi_theta) + ((1.0 - one_hot) * cos_theta)
         # output = (phi_theta * one_hot) + (cos_theta * (1.0 - one_hot))
         output *= self.scale
-        import ipdb;ipdb.set_trace()
+        # import ipdb;ipdb.set_trace()
 
 
         log_probs = nn.functional.log_softmax(output, dim=1)

@@ -1,0 +1,1 @@
+python ../test_attribute_recognition.py --config_file ../config/test.yml
