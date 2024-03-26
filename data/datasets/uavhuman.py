@@ -117,6 +117,22 @@ class UAVHuman(ImageDataset):
         UCS_number_list = [0] * 4
         LCC_number_list = [0] * 12
         LCS_number_list = [0] * 4
+
+        set_gender_number = False
+        set_Backpack_number = False
+        set_Hat_number = False
+        set_UCC_number = False
+        set_UCS_number = False
+        set_LCC_number = False
+        set_LCS_number = False
+
+        # set_gender_number = True
+        # set_Backpack_number = True
+        # set_Hat_number = True
+        # set_UCC_number = True
+        # set_UCS_number = True
+        set_LCC_number = True
+        # set_LCS_number = True
         dataset = []
         for img_path in img_paths:
             fname = osp.split(img_path)[-1]
@@ -134,47 +150,21 @@ class UAVHuman(ImageDataset):
                 pid = self.dataset_name + "_" + str(pid)
                 # attributes infos
                 gender = int(pattern_gender.search(fname).groups()[0][0]) - 1 # 0: n/a; 1: male; 2: female
-                # control gender male and female rate 
-                # if(gender == 0):
-                #     if(gender_number_list[0] > 1288):
-                #         continue
-                #     else:
-                #         gender_number_list[gender] += 1
-                # else:
-                #     gender_number_list[gender] += 1
+                
                 backpack = int(pattern_backpack.search(fname).groups()[0][0])
                 if backpack == 5:
                     backpack = 0 # 0: n/a; 1: red; 2: black; 3: green; 4: yellow; 5: n/a
-                # if(backpack == 0):
-                #     if(backpack_number_list[0] > 1000):
-                #         continue
-                #     else:
-                #         backpack_number_list[backpack] += 1
-                # else:
-                #     backpack_number_list[backpack] += 1
                 hat = int(pattern_hat.search(fname).groups()[0][0]) # 0: n/a; 1: red; 2: black; 3: yellow; 4: white; 5: n/a
                 if hat == 5:
                     hat = 0
-                # if(hat == 0):
-                #     if(hat_number_list[0] > 1000):
-                #         continue
-                #     else:
-                #         hat_number_list[hat] += 1
-                # else:
-                #     hat_number_list[hat] += 1
                 upper_cloth = pattern_upper.search(fname).groups()[0]
                 upper_color = int(upper_cloth[:2]) # 0: n/a; 1: red; 2: black; 3: blue; 4: green; 5: multicolor; 6: grey; 7: white; 8: yellow; 9: dark brown; 10: purple; 11: pink
                 upper_style = int(upper_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt
+                
                 lower_cloth = pattern_lower.search(fname).groups()[0]
                 lower_color = int(lower_cloth[:2]) # 0: n/a; 1: red; 2: black; 3: blue; 4: green; 5: multicolor; 6: grey; 7: white; 8: yellow; 9: dark brown; 10: purple; 11: pink
-                # if(lower_color == 6):
-                #     if(LCC_number_list[6] > 100):
-                #         continue
-                #     else:
-                #         LCC_number_list[lower_color] += 1
-                # else:
-                #     LCC_number_list[lower_color] += 1
                 lower_style = int(lower_cloth[2]) # 0: n/a; 1: long; 2: short; 3: skirt
+                
                 action = int(pattern_action.search(fname).groups()[0])
                 attributes = {
                     "gender": gender,
@@ -185,6 +175,138 @@ class UAVHuman(ImageDataset):
                     "lower_color": lower_color,
                     "lower_style": lower_style
                 }
+                # control gender male and female rate 
+                if set_gender_number:
+                    if(gender == 0):
+                        if(gender_number_list[gender] > 1288):
+                            continue
+                        else:
+                            gender_number_list[gender] += 1
+                    else:
+                        gender_number_list[gender] += 1
+                # control backpack number
+                if set_Backpack_number:
+                    if(backpack == 0): # n/a number 4000_1  3000_2
+                        if(backpack_number_list[backpack] > 3000):
+                            continue
+                        else:
+                            backpack_number_list[backpack] += 1
+                    elif(backpack == 4): # yellow number * 2_1 *3_2
+                        backpack_number_list[backpack] += 1
+                        backpack_number_list[backpack] += 1
+                        backpack_number_list[backpack] += 1
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                    else:
+                        backpack_number_list[backpack] += 1
+                # control hat number
+                if set_Hat_number:
+                    if(hat == 0):
+                        if(hat_number_list[hat] > 3000):
+                            continue
+                        else:
+                            hat_number_list[hat] += 1
+                    else:
+                        hat_number_list[hat] += 1
+                # control UCS number
+                if set_UCS_number:
+                    if(upper_style == 1): # long * 2
+                        UCS_number_list[upper_style] += 1
+                        UCS_number_list[upper_style] += 1
+                        dataset.append((img_path, pid, camid, attributes))   
+                    else:
+                        UCS_number_list[upper_style] += 1
+                # control LCS number
+                if set_LCS_number:
+                    if(lower_style == 1): # long 5000
+                        if(LCS_number_list[lower_style] > 5000):
+                            continue
+                        else:
+                            LCS_number_list[lower_style] += 1
+                    else:
+                        LCS_number_list[lower_style] += 1
+                # control UCC number
+                if set_UCC_number:
+                    if(upper_color == 7): # white 1000
+                        if(UCC_number_list[upper_color] > 1000):
+                            continue
+                        else:
+                            UCC_number_list[upper_color] += 1
+                    elif upper_color == 3: # blue 100
+                        if(UCC_number_list[upper_color] > 100):
+                            continue
+                        else:
+                            UCC_number_list[upper_color] += 1
+                    elif upper_color == 6: # grey * 2
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        dataset.append((img_path, pid, camid, attributes))
+                    elif upper_color == 1: # red * 8
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                    elif upper_color == 2: # black 1000
+                        if(UCC_number_list[upper_color] > 1000):
+                            continue
+                        else:
+                            UCC_number_list[upper_color] += 1
+                    elif upper_color == 4: # green 100
+                        if(UCC_number_list[upper_color] > 100):
+                            continue
+                        else:
+                            UCC_number_list[upper_color] += 1
+                    elif upper_color == 11: # pink * 5
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                    elif upper_color == 5: # multicolor 200
+                        if(UCC_number_list[upper_color] > 200):
+                            continue
+                        else:
+                            UCC_number_list[upper_color] += 1
+                    else:
+                        UCC_number_list[upper_color] += 1
+                # control LCC number
+                if set_LCC_number:
+                    if(lower_color == 6): # grey 100
+                        if(LCC_number_list[lower_color] > 100):
+                            continue
+                        else:
+                            LCC_number_list[lower_color] += 1
+                    # elif(lower_color == 2): # black 3000
+                    #     if(LCC_number_list[lower_color] > 3000):
+                    #         continue
+                    #     else:
+                    #         LCC_number_list[lower_color] += 1
+                    elif(lower_color == 9): # dark brown * 2_1 *3_2 *4_3
+                        LCC_number_list[lower_color] += 1
+                        LCC_number_list[lower_color] += 1
+                        LCC_number_list[lower_color] += 1
+                        LCC_number_list[lower_color] += 1
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                    else:
+                        LCC_number_list[lower_color] += 1
+
             else:
                 pid = self.dataset_name + "_" + str(pid)
 
@@ -214,8 +336,14 @@ class UAVHuman(ImageDataset):
                 }
             # if relabel: pid = pid2label[pid] # relabel in common.py
             dataset.append((img_path, pid, camid, attributes))
-        # print(UCC_number_list)
-        print(gender_number_list)
+        if is_train:
+            print(f"Gender_number_list: {gender_number_list}")
+            print(f"Backpack_number_list: {backpack_number_list}")
+            print(f"Hat_number_list: {hat_number_list}")
+            print(f"UCC_number_list: {UCC_number_list}")
+            print(f"UCS_number_list: {UCS_number_list}")
+            print(f"LCC_number_list: {LCC_number_list}")
+            print(f"LCS_number_list: {LCS_number_list}")
         return dataset
 
     def get_imagedata_info(self, data):

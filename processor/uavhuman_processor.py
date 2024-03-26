@@ -282,7 +282,7 @@ def attr_vit_do_train_with_amp(cfg,
                             if dist.get_rank() == 0:
                                 torch.save(model.state_dict(),
                                         os.path.join(log_path, name[i] + '_best.pth'))
-                        elif i == 3:
+                        elif i in cfg.SAVE_MODEL:
                             torch.save(model.state_dict(),
                                     os.path.join(log_path, name[i] + '_best.pth'))
                 table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
@@ -296,9 +296,9 @@ def attr_vit_do_train_with_amp(cfg,
     table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
     formatted_accuracy_per_attribute_best = ["{:.2%}".format(accuracy) for accuracy in best_attr]
     table.add_row(["Attribute Recognition"] + formatted_accuracy_per_attribute_best)
-    table.add_row(["best epoch"] + best_index)
+    table.add_row(["best epoch"] + best_attr_index)
     logger.info('\n' + str(table))
-    logger.info("=====best accuracy: {:.2%}=====".format(sum(best)))
+    logger.info("=====best accuracy: {:.2%}=====".format(sum(best_attr)))
     logger.info(f"=======save path: {log_path} =======")
     # # final evaluation
     # load_path = os.path.join(log_path, cfg.MODEL.NAME + '_best.pth')

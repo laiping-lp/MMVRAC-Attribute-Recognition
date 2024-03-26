@@ -11,3 +11,4 @@ pip install matplotlib
 pip install tqdm
 pip install prettytable
 pip install pillow
+pip install openpyxl

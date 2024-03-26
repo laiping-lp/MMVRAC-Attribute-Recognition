@@ -88,13 +88,16 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
     if_only_LCC_center_loss = False
     # if_only_LCC_center_loss = True
     if_only_UCC_center_loss = False
+    if_only_UCC_UCS_center_loss = False
     # if_only_UCC_center_loss = True 
     logger.info(f"if_focal_loss:{if_focal_loss}, if_logsoftmax_with_center_loss:{if_logsoftmax_with_center_loss}, if_arcface:{if_arcface}, if_LSoftmax_loss:{if_LSoftmax_loss}")
     logger.info(f"if_only_LCC_center_loss:{if_only_LCC_center_loss},if_only_UCC_center_loss:{if_only_UCC_center_loss}")
     if if_focal_loss:
         logger.info(f'focal loss parameters:  alpha: {alpha}, gamma: {gamma}, reduction: {reduction}, scale: {scale}')
-    # center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
-    center_criterion_attr = CenterLoss(num_classes=12,feat_dim=768,use_gpu=True)
+    if cfg.LOSS.LOGSOFTMAX_CENTER_LOSS_ATTR:
+        center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
+    elif cfg.LOSS.LOGSOFTMAX_CENTER_LOSS:
+        center_criterion_attr = CenterLoss(num_classes=12,feat_dim=768,use_gpu=True)
     margin = cfg.LOSS.L_MARGIN
     lsoftmaxloss = LSoftMaxLoss(num_classes=12,margin=margin,scale=768)
     arcface = ArcFace(in_features=64,out_features=768,m= margin)
@@ -205,6 +208,18 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
                         loss_attr = sum([l.mean(0).sum() for l in loss_attr])
                         # loss_attr += loss_center_attr * center_weight_attr
                         # import ipdb;ipdb.set_trace()
+                    elif if_only_UCC_UCS_center_loss:
+                        attr_log_probs1 = nn.LogSoftmax(dim=1)(attr_scores[3])  # attr
+                        attr_log_probs2 = nn.LogSoftmax(dim=1)(attr_scores[4])
+                        # loss_center_attr =  center_criterion_attr(feat,attributes[3])  
+
+                        loss_attr1 = -attr_targets[3] * attr_log_probs1[3]
+                        loss_attr2 = -attr_targets[4] * attr_log_probs2[4]
+                        loss_attr1 = sum([l.mean(0).sum() for l in loss_attr1])
+                        loss_attr2 = sum([l.mean(0).sum() for l in loss_attr2])
+                        loss_attr = loss_attr1 + loss_attr2
+                        # loss_attr += loss_center_attr * center_weight_attr
+                        # import ipdb;ipdb.set_trace()
                     else:
                         attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
                         loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
@@ -254,7 +269,7 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
                         if dist.get_rank() == 0:
                             torch.save(model.state_dict(),
                                     os.path.join(log_path, name[i] + '_best.pth'))
-                    elif  i == 1 or i == 6:
+                    elif i in cfg.SAVE_MODEL:
                         torch.save(model.state_dict(),
                                 os.path.join(log_path, name[i] + '_best.pth'))
             table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])

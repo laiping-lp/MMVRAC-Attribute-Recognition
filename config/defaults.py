@@ -340,9 +340,13 @@ _C.LOSS = CN()
 # extra loss function
 _C.LOSS.FOCAL_LOSS = False
 _C.LOSS.LOGSOFTMAX_CENTER_LOSS = False
+_C.LOSS.LOGSOFTMAX_CENTER_LOSS_ATTR = False
 _C.LOSS.ARCFACE = False
 _C.LOSS.LSOFTMAX_LOSS = False
 _C.LOSS.CENTER_LOSS_WEIGHT = 0.005 ## just for attr center_loss
 # L-softmax MARGIN
 _C.LOSS.L_MARGIN = 1
 
+
+_C.SAVE_MODEL = CN()
+_C.SAVE_MODEL = []

@@ -2,8 +2,8 @@ import os
 from config import cfg
 import argparse
 from data.build_DG_dataloader import build_reid_test_loader
-from model.make_model_only_attr import make_model
-# from model import make_model
+# from model.make_model_only_attr import make_model
+from model import make_model
 from processor.inf_processor import do_inference_only_attr
 from utils.logger import setup_logger
 
@@ -44,6 +44,7 @@ if __name__ == "__main__":
     model = make_model(cfg, cfg.MODEL.NAME, 0)
     if cfg.TEST.WEIGHT:
         model.load_param(cfg.TEST.WEIGHT)
+        logger.info(f"Loading model: =======> {cfg.TEST.WEIGHT}")
     else:
         print("==== random param ====")
 
