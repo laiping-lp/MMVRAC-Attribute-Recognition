@@ -62,16 +62,16 @@ def eval_func_make_new_json(distmat, max_rank=50, query=None, gallery=None, log_
     new_load_data = []
     new_gallery_data = []
     remain_gallery_data = []
-    for data in other_data:
-        new_data = {
-            "file_path":"",
-            "pre_label":"",
-            "real_label":"" 
-        }
-        new_data["file_path"] = data[0]
-        new_data['pre_label'] = data[3]['pre_label']
-        new_data['real_label'] = data[3]['real_label']
-        new_load_data.append(new_data)
+    # for data in other_data:
+        # new_data = {
+        #     "file_path":"",
+        #     "pre_label":"",
+        #     "real_label":"" 
+        # }
+        # new_data["file_path"] = data[0]
+        # new_data['pre_label'] = data[3]['pre_label']
+        # new_data['real_label'] = data[3]['real_label']
+        # new_load_data.append(new_data)
     for data in query:
         new_data = {
             "file_path":"",
@@ -125,17 +125,24 @@ def eval_func_make_new_json(distmat, max_rank=50, query=None, gallery=None, log_
         # print(query_,distmat[i][index[5]],gallery[index[5]])
         # if i == 50:
         #     break
-        for index_ in index[:5]: 
+        
+        for index_ in index[:10]: 
             # import ipdb;ipdb.set_trace()
-            if(distmat[i][index_]) < 0.3:  
-    # # backpack
+            if(distmat[i][index_]) < 0.3: 
+    # # UCS
+    # # long find in short
+    # # hat #### 5 0.3 acc=83.46 ####
+    # # yellow find in black # 10 0.3 acc=83.27 # 5 0.3 acc=83.289
+    # # yellow find in other # 10 0.3 acc=83.36 # 20 0.3 
+    # # yellow find in other # 5 0.3 acc=83.46 # 10 0.3 acc=83.41 # 5 0.4 acc=83.32
+    # # backpack #####200 0.3 acc=84.33#####
     # # yellow # 1.0 acc=78.1  #0.8 acc=78.6  #0.6 acc=79.6 #0.5 acc=79.98 #0.4 acc=80.38 # 0.3 acc=81.25
     # # yellow find n/a and green #0.3 acc= 82.84 #0.2 acc=81.79 #0.25 # 50 0.3 acc=83.25 # 60 0.3 acc=83.35
     # # yellow find n/a and green # 70 0.3 acc=83.46 #100 0.3 acc=83.64 #200 0.3 acc=83.74 #200 0.4 acc=81.59 #200 0.2 acc=82.37
     # # yellow find in other # 100 0.3 acc=84.20 #####200 0.3 acc=84.33##### #500 0.3 acc=84.26 #300 0.3 acc=84.14 #400 0.3 acc=84.21
     # # yellow find in other # 200 0.2 acc=82.79
     # # green # 0.3 acc=79.92  #0.5 acc=79.54 #0.1 acc=80.21
-    # # UCC
+    # # UCC first ##### 1000 1.1 acc=71.92######
     # # red find in 5,2,7 200 0.3 acc=65.48 # 50 0.3 acc=65.48 #20 0.3 acc=65.48 #20 0.4 acc=65.62 # 20 0.5 acc=65.71 # 20 0.6 acc=65.78 
     # # 20 1.0 acc=65.17 #20 0.7 acc=65.79
     # # red find in 5,2,11 #20 0.7 acc=65.84
@@ -144,10 +151,10 @@ def eval_func_make_new_json(distmat, max_rank=50, query=None, gallery=None, log_
     # # red find in 5,2,10 # 500 0.9 acc=68.54 #1000 0.9 acc=68.54 # 1000 0.95 acc=70.13 #1000 1.0 acc=70.06 #2000 0.95 acc=70.13 
     # # red find in 5,2,10 #2000 0.75 acc=66.27 ##### 1000 1.1 acc=71.92###### # 2000 1.1 acc=69.40 #500 acc=69.99
     # # red find in 5 2 7 10 # 1000 1.1 acc=65.74 #500 1.1 acc=66.50 #200 0.95 acc=66.24
-    # # UCC second 
+    # # UCC second  #### 5 0.4 acc=72.07###
     # # red find in 7 10 # 100 0.8 acc=70.17 #50 0.5 acc=71.86 # 20 0.5 acc=72.009 # 10 0.5 acc=72.04 # 10 0.6 acc=71.96
-    # # red find in 7 10 ####3 5 0.4 acc=72.07### # 5 0.5 acc= 72.05 # 5 0.7 acc=71.86 # 5 0.3 acc=72.04 
-    # #LCC
+    # # red find in 7 10 #### 5 0.4 acc=72.07### # 5 0.5 acc= 72.05 # 5 0.7 acc=71.86 # 5 0.3 acc=72.04 
+    # #LCC #####30 0.5 acc=90.68####
     # #20 0.5 acc=90.63 #50 0.5 acc=90.5 #####30 0.5 acc=90.68####
                 if index_flag[index_] ==  1:
                     new_data["file_path"] = gallery[index_][0]
@@ -176,7 +183,7 @@ def eval_func_make_new_json(distmat, max_rank=50, query=None, gallery=None, log_
             acc_count += 1
             
     print("accuracy: ",acc_count * 100 / len(new_load_data))
-    # with open("/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/UCC_after_red.json",'w') as f_1:
+    # with open("/data3/laiping/recurrence/ALL_best_model/attr_with_reid/Hat_new.json",'w') as f_1:
     #     json.dump(new_load_data,f_1)
     # with open("/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/backpack_after_yellow_after_green.json",'w') as f_1:
     #     json.dump(new_load_data,f_1)
