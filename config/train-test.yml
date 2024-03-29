@@ -1,0 +1,119 @@
+MODEL:
+  PRETRAIN_CHOICE: 'imagenet' # imagenet, LUP
+  PRETRAIN_PATH: "/data4/liyuke/checkpoint/jx_vit_base_p16_224-80ecf9dd.pth"
+  # PRETRAIN_PATH: "/data3/laiping/humanbench-model/vit_base.pth" # root of pretrain path
+  # PRETRAIN_PATH: "/data3/laiping/humanbench-model/vit_large.pth" # root of pretrain path
+  # PRETRAIN_PATH: "/data3/laiping/humanbench-model/vit_large_new.pth" # root of pretrain path
+  # PRETRAIN_PATH: "/home/liyuke/data4/checkpoint/swin_base_patch4_window7_224_22k.pth" # root of pretrain path
+  METRIC_LOSS_TYPE: 'triplet_center' # triplet, triplet_center
+  # DIM: 1024 # current model dim
+  DIM: 768
+  # DIM: 1024
+  IF_LABELSMOOTH: 'on'
+  NAME: 'only_attribute_recognition' #'attr_vit' # only_attr_vit_cls attr_vit vit
+  # NAME: "attr_vit"
+  # local_attention_vit, mask_vit, mae, DG_ssl_vit, color_vit, rotate_vit, resnet50, ibnnet50b, vit, distill_vit, prompt_vit, mix_vit, mem_vit, mem_tri_vit, mix_resnet, mix_ibnnet50a, mix_ibnnet50b
+  NO_MARGIN: True
+  DEVICE_ID: ('0')
+  # TRANSFORMER_TYPE: 'swin_base_patch4_window7_224' #attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID, vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  # TRANSFORMER_TYPE: 'attr_vit_large_patch16_224_TransReID' #attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID, vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  # TRANSFORMER_TYPE: 'attr_vit_base_patch16_224_TransReID' 
+  # TRANSFORMER_TYPE: "only_attr_vit_large_patch16_224_TransReID" # only_attr_vit_base_patch16_224_TransReID
+  TRANSFORMER_TYPE: "only_attr_vit_base_patch16_224_TransReID" # 
+  #attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID, vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  # TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID' # vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  # TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID' # vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  STRIDE_SIZE: 12
+  DROP_PATH: 0.1 ###### avoid overfitting
+  # FREEZE_PATCH_EMBED: True
+  # FIXED_RES_BN: True
+
+INPUT:
+  SIZE_TRAIN: [256,128]
+  # SIZE_TRAIN: [224,224]
+  # SIZE_TEST: [224,224]
+  # SIZE_TRAIN: [384, 192]
+  SIZE_TEST: [256,128]
+  # SIZE_TEST: [384,192]
+  PIXEL_MEAN: [0.5, 0.5, 0.5]
+  PIXEL_STD: [0.5, 0.5, 0.5]
+  REA: # random erasing
+    ENABLED: True
+  # LGT: # Local Grayscale Transfomation
+  #   DO_LGT: True
+  #   PROB: 0.5
+
+DATASETS:
+  TRAIN: ('UAVHuman',)
+  TEST: ('UAVHuman',)
+  ROOT_DIR: ('/data4/liyuke') # root of datasets
+
+DATALOADER:
+  SAMPLER: 'softmax_triplet' # softmax_triplet, graph_sampler, single_domain, center_hard_sampler
+  NUM_INSTANCE: 4
+  NUM_WORKERS: 8
+  CAMERA_TO_DOMAIN: True
+
+SOLVER:
+  OPTIMIZER_NAME: 'AdamW' # AdamW, SAM
+  # OPTIMIZER_NAME: 'SGD' # AdamW, SAM
+  MAX_EPOCHS: 20 # 60 for reid # 15 for attr_re
+  BASE_LR: 0.000035 # for AdamW
+  # BASE_LR: 0.01 # for SGD 
+  # BASE_LR: 0.0001 # 0.0004 for msmt
+  # BASE_LR: 0.0005 # humanbench vit_large
+  # BASE_LR: 0.01 # humanbench vit_base
+  IMS_PER_BATCH: 64
+  LARGE_FC_LR: False
+  CHECKPOINT_PERIOD: 5
+  LOG_PERIOD: 60 ## 60
+  EVAL_PERIOD: 1
+  WEIGHT_DECAY:  1e-4
+  WEIGHT_DECAY_BIAS: 1e-4
+  BIAS_LR_FACTOR: 2
+  SEED: 1234
+  CENTER_LOSS_WEIGHT: 0.0005 #
+
+TEST:
+  EVAL: True
+  IMS_PER_BATCH: 256
+  # RE_RANKING: True # False
+  RE_RANKING: False #True # False
+  QUERY_AGGREGATE: False #True
+ 
+  # WEIGHT: '/data3/laiping/vit_base_only_attribute_recognition_AWamW_3e5_3/only_attribute_recognition_best.pth'
+  # WEIGHT: '/data3/laiping/vit_base_only_attribute_recognition_AWamW_3e5_center_loss_4/only_attribute_recognition_best.pth'
+  # WEIGHT: '/data3/laiping/vit_base_only_attribute_recognition_AWamW_3e-5/only_attribute_recognition_best.pth'
+  # WEIGHT: '/data3/laiping/vit_base_only_attribute_recognition_AWamW_35e5_focal_loss_sum_5/only_attribute_recognition_best.pth'
+  # WEIGHT: '/data3/laiping/vit_base_only_attribute_recognition_Lsoftmax_loss_5/only_attribute_recognition_best.pth'
+  # WEIGHT: '/data3/laiping/recurrence/uavhuman_vit_base_attr_AWamw_only_attr_vit_cls_3e5/only_attr_vit_cls_best.pth'
+  # WEIGHT: '/data3/laiping/exp/vit_base_attr_vit_SGD_1e_2_lsoftmax_loss/attr_vit_best.pth'
+  WEIGHT: '/data3/laiping/recurrence/test/only_attribute_recognition_best.pth'
+
+
+  NECK_FEAT: 'before'
+  FEAT_NORM: True
+  ATTRIBUTE_RECOGNITION: True
+
+LOG_ROOT: '/data3/laiping/recurrence/' # root of log file
+TB_LOG_ROOT: './tb_log/'
+
+
+# LOG_NAME: 'uavhuman_vit_b12_rea_256x128_centerLoss_lr1e-2'
+# LOG_NAME: 'vit_base_only_attribute_recognition_AWamW_3e5_center_loss_4'
+# LOG_NAME: 'vit_base_attr_vit_SGD_1e_2_lsoftmax_loss'
+# LOG_NAME: 'vit_base_only_attribute_recognition_AWamW_3e5_3'
+# LOG_NAME: 'vit_base_only_attribute_recognition_AWamW_3e-5'
+# LOG_NAME: 'vit_base_only_attribute_recognition_AWamW_35e5_focal_loss_sum_5'
+# LOG_NAME: 'vit_base_only_attribute_recognition_Lsoftmax_loss_5'
+LOG_NAME: 'test'
+# 
+LOSS:
+  FOCAL_LOSS: False
+  LOGSOFTMAX_CENTER_LOSS: False
+  ARCFACE: False
+  LSOFTMAX_LOSS: True
+  CENTER_LOSS_WEIGHT: 0.005 ## just for attr center_loss
+  L_MARGIN: 5 ## just for attr lsoftmax
+
+SAVE_MODEL: [0]

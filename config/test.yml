@@ -1,0 +1,94 @@
+MODEL:
+  PRETRAIN_CHOICE: 'imagenet' # imagenet, LUP
+  PRETRAIN_PATH: "/data4/liyuke/checkpoint/jx_vit_base_p16_224-80ecf9dd.pth"
+  METRIC_LOSS_TYPE: 'triplet_center' # triplet, triplet_center
+  # DIM: 1024 # current model dim
+  DIM: 768
+  # DIM: 1024
+  IF_LABELSMOOTH: 'on'
+  # NAME: 'only_attribute_recognition' #'attr_vit' # only_attr_vit_cls attr_vit vit
+  NAME: "attr_vit"
+  # local_attention_vit, mask_vit, mae, DG_ssl_vit, color_vit, rotate_vit, resnet50, ibnnet50b, vit, distill_vit, prompt_vit, mix_vit, mem_vit, mem_tri_vit, mix_resnet, mix_ibnnet50a, mix_ibnnet50b
+  NO_MARGIN: True
+  DEVICE_ID: ('0')
+  # TRANSFORMER_TYPE: 'swin_base_patch4_window7_224' #attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID, vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  # TRANSFORMER_TYPE: 'attr_vit_large_patch16_224_TransReID' #attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID, vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  TRANSFORMER_TYPE: 'attr_vit_base_patch16_224_TransReID' 
+  # TRANSFORMER_TYPE: "only_attr_vit_base_patch16_224_TransReID"
+  # TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID' # vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  # TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID' # vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
+  STRIDE_SIZE: 12
+  DROP_PATH: 0.1 ###### avoid overfitting
+  # FREEZE_PATCH_EMBED: True
+  # FIXED_RES_BN: True
+
+INPUT:
+  SIZE_TRAIN: [256,128]
+  # SIZE_TRAIN: [224,224]
+  # SIZE_TEST: [224,224]
+  # SIZE_TRAIN: [384, 192]
+  SIZE_TEST: [256,128]
+  # SIZE_TEST: [384,192]
+  PIXEL_MEAN: [0.5, 0.5, 0.5]
+  PIXEL_STD: [0.5, 0.5, 0.5]
+  # REA: # random erasing
+  #   ENABLED: True
+  # LGT: # Local Grayscale Transfomation
+  #   DO_LGT: True
+  #   PROB: 0.5
+
+DATASETS:
+  TRAIN: ('UAVHuman',)
+  TEST: ('UAVHuman',)
+  ROOT_DIR: ('/data4/liyuke') # root of datasets
+
+DATALOADER:
+  SAMPLER: 'softmax_triplet' # softmax_triplet, graph_sampler, single_domain, center_hard_sampler
+  NUM_INSTANCE: 4
+  NUM_WORKERS: 8
+  CAMERA_TO_DOMAIN: True
+
+SOLVER:
+  OPTIMIZER_NAME: 'SGD' # AdamW, SAM
+  MAX_EPOCHS: 60 # 60 for reid # 15 for attr_re
+  BASE_LR: 0.01 # humanbench vit_base
+  IMS_PER_BATCH: 64
+  LARGE_FC_LR: False
+  CHECKPOINT_PERIOD: 5
+  LOG_PERIOD: 60 ## 60
+  EVAL_PERIOD: 5
+  WEIGHT_DECAY:  1e-4
+  WEIGHT_DECAY_BIAS: 1e-4
+  BIAS_LR_FACTOR: 2
+  SEED: 1234
+
+TEST:
+  EVAL: True
+  IMS_PER_BATCH: 256
+  # RE_RANKING: True # False
+  RE_RANKING: False #True # False
+  QUERY_AGGREGATE: False #True
+  GEN_ATTR_RESLUT: True
+  # WEIGHT: '/data3/laiping/recurrence/ALL_best_model/Backpack_best.pth'
+  # WEIGHT: '/data3/laiping/recurrence/best_model/Hat_best.pth'
+  # WEIGHT: '/data3/laiping/recurrence/best_model/LCC_best.pth'
+  # WEIGHT: '/data3/laiping/recurrence/best_model/LCS_best.pth'
+  # WEIGHT: '/data3/laiping/recurrence/best_model/Gender_best.pth'  
+  # WEIGHT: '/data3/laiping/recurrence/best_model/UCC_best.pth'
+  # WEIGHT: '/data3/laiping/recurrence/best_model/UCS_best.pth' # attr_vit
+  # WEIGHT: '/data3/laiping/recurrence/UCC_control_number_3/UCC_best.pth'
+  WEIGHT: '/home/liyuke/data4/exp/attr_vit_multi_source_b12_rea_256x128_centerLoss_lr1e-2/attr_vit_best.pth'
+
+
+  NECK_FEAT: 'before'
+  FEAT_NORM: True
+  ATTRIBUTE_RECOGNITION: True
+
+# LOG_ROOT: '/data3/laiping/exp/' # root of log file
+LOG_ROOT: '/data3/laiping/recurrence/' # root of log file
+TB_LOG_ROOT: './tb_log/'
+
+# LOG_NAME: 'ALL_best_model'
+LOG_NAME: 'test'
+
+
