@@ -93,6 +93,7 @@ def build_reid_test_loader(cfg, dataset_name, opt=None, flag_test=True, shuffle=
             dataset = DATASET_REGISTRY.get(dataset_name)(root=_root, split_id=split_id)
         else:
             dataset = DATASET_REGISTRY.get(dataset_name)(root=_root)
+        # import ipdb;ipdb.set_trace()
         if comm.is_main_process():
             if flag_test:
                 dataset.show_test()
@@ -114,6 +115,8 @@ def build_reid_test_loader(cfg, dataset_name, opt=None, flag_test=True, shuffle=
         test_items = dataset.train
     query = dataset.query
     gallery = dataset.gallery
+    other_data = dataset.train
+    # import ipdb;ipdb.set_trace()
     test_set = CommDataset(cfg, test_items, test_transforms, relabel=False)
     batch_size = bs if bs is not None else cfg.TEST.IMS_PER_BATCH
     data_sampler = samplers.InferenceSampler(len(test_set))
@@ -130,7 +133,7 @@ def build_reid_test_loader(cfg, dataset_name, opt=None, flag_test=True, shuffle=
         batch_sampler=batch_sampler,
         num_workers=num_workers,  # save some memory
         collate_fn=fast_batch_collator)
-    return query, gallery, test_loader, len(dataset.query)
+    return query, gallery, test_loader, len(dataset.query),other_data
 
 
 def trivial_batch_collator(batch):

@@ -8,7 +8,7 @@ from tqdm import tqdm
 import openpyxl
 
 
-def Attribute_Recognition(cfg,attributes,attr_classes,data_list,gen_attr_reslut = False):
+def Attribute_Recognition(cfg,attributes,attr_classes,data_list,gen_attr_reslut = False,names = None):
     print("=> Attribute Recognition")
     num_attributes = 7  # num_class of attributes
     accuracy_per_attribute = [0] * num_attributes  # init attribute accuracy list
@@ -22,9 +22,9 @@ def Attribute_Recognition(cfg,attributes,attr_classes,data_list,gen_attr_reslut 
             if attr_classes[i][j] == attributes[i][j]:
                 accuracy_per_attribute[i % 7] += 1
                 # all_result
-                # attr_re_path[i % 7].append(informations['img_path'][j])
-                # attr_pre_label[i % 7].append(attr_classes[i][j])
-                # attr_label[i % 7].append(attributes[i][j])
+                attr_re_path[i % 7].append(informations['img_path'][j])
+                attr_pre_label[i % 7].append(attr_classes[i][j])
+                attr_label[i % 7].append(attributes[i][j])
             else:
                 attr_re_path[i % 7].append(informations['img_path'][j])
                 attr_pre_label[i % 7].append(attr_classes[i][j])
@@ -43,7 +43,7 @@ def Attribute_Recognition(cfg,attributes,attr_classes,data_list,gen_attr_reslut 
     }
     # names = ["gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style']
     # names = ['gender']
-    names = ['backpack']
+    # names = ['backpack']
     # names = ['hat']
     # names = ['upper_color']
     # names = ['upper_style']
@@ -55,7 +55,7 @@ def Attribute_Recognition(cfg,attributes,attr_classes,data_list,gen_attr_reslut 
             make_attr_json(cfg,name,attr_re_path[attr_dict[name]],attr_label[attr_dict[name]],attr_pre_label[attr_dict[name]])
             # break
             # break
-        make_attr_error_type_xlsx(cfg)
+        # make_attr_error_type_xlsx(cfg,names)
     return accuracy_per_attribute
 
 def gen_attr_re_img(cfg,name,attr_re_path,attr_label,attr_pre_label):
@@ -120,15 +120,16 @@ def make_attr_json(cfg,name,attr_re_path,attr_label,attr_pre_label):
         data['pre_label'] = pre_label
         load_data.append(data)
     
-    # save_folder = cfg.LOG_ROOT + cfg.LOG_NAME + "/attr_all_result_json_file"
-    save_folder = cfg.LOG_ROOT + cfg.LOG_NAME + "/json_file"
+    save_folder = cfg.LOG_ROOT + cfg.LOG_NAME + "/attr_all_result_json_file"
+    # save_folder = cfg.LOG_ROOT + cfg.LOG_NAME + "/json_file"
     if  not os.path.exists(save_folder):
         os.makedirs(save_folder)
     print(len(load_data))
-    with open(f"{save_folder}/{name}.json",'w') as f:
+    with open(f"{save_folder}/{name}_all.json",'w') as f:
         json.dump(load_data,f)
 
-def make_attr_error_type_xlsx(cfg):
+# def make_attr_error_type_xlsx(cfg,names):
+def make_attr_error_type_xlsx(names):
     print("=> Attribute error type generate xlsx!")
     genders = ["male","female"]
     backpacks = ["n/a","red","black","green","yellow","n/a"]
@@ -148,15 +149,17 @@ def make_attr_error_type_xlsx(cfg):
     }
     # names = ['gender','backpack','hat','lower_color','lower_style',"upper_color",'upper_style']
     # names = ['gender']
-    names = ['backpack']
+    # names = ['backpack']
     # names = ['hat']
     # names = ['upper_color']
     # names = ['upper_style']
     # names = ['lower_color']
     # names = ['lower_style']
-    dir_path = cfg.LOG_ROOT + cfg.LOG_NAME + "/json_file"
+    # dir_path = cfg.LOG_ROOT + cfg.LOG_NAME + "/json_file"
+    # dir_path =
     for name in names:
-        file_path = f"{dir_path}/{name}.json"
+        # file_path = f"{dir_path}/{name}.json"
+        file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/backpack_after_yellow.json"
         with open(file_path,'r') as f:
             load_data = json.load(f)
         label_list = set()
@@ -183,7 +186,8 @@ def make_attr_error_type_xlsx(cfg):
                 if(label == label_list[i]):
                     label_list_count[i] += 1
         # print(label_list_count)
-        save_folder = cfg.LOG_ROOT + cfg.LOG_NAME + "/error_type_xlsx"
+        # save_folder = cfg.LOG_ROOT + cfg.LOG_NAME + "/error_type_xlsx"
+        save_folder = "/data3/laiping/recurrence/ALL_best_model/111"
         if  not os.path.exists(save_folder):
             os.makedirs(save_folder)
         filename = f'{save_folder}/{name}.xlsx'
@@ -201,3 +205,7 @@ def make_attr_error_type_xlsx(cfg):
         #     for i in range(len(label_list)):
         #         writer.writerow([label_list[i], label_list_count[i]])
         # break
+
+if __name__ == '__main__': 
+    names = ['upper_color']
+    make_attr_error_type_xlsx(names)

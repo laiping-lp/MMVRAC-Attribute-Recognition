@@ -81,13 +81,17 @@ def attr_vit_do_train_with_amp(cfg,
     name = ['Gender','Backpack','Hat','UCC','UCS',"LCC",'LCS']
     margin = cfg.LOSS.L_MARGIN
     if_logsoftmax_with_center_loss = cfg.LOSS.LOGSOFTMAX_CENTER_LOSS
-    # if_logsoftmax_with_center_loss = True
+    if_logsoftmax_with_center_loss_attr = cfg.LOSS.LOGSOFTMAX_CENTER_LOSS_ATTR
     if_L_softmax = cfg.LOSS.LSOFTMAX_LOSS
     if_only_UCC_center_loss = False
     # if_only_UCC_center_loss = True 
-    logger.info(f"if_logsoftmax_with_center_loss:{if_logsoftmax_with_center_loss}, if_L_softmax: {if_L_softmax}")
+    logger.info(f"if_logsoftmax_with_center_loss:{if_logsoftmax_with_center_loss},if_logsoftmax_with_center_loss_attr:{if_logsoftmax_with_center_loss_attr}")
+    logger.info(f"if_L_softmax: {if_L_softmax}")
     logger.info(f"if_only_UCC_center_loss:{if_only_UCC_center_loss}")
-    center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
+    if if_logsoftmax_with_center_loss_attr:
+        center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
+    elif if_logsoftmax_with_center_loss:
+        center_criterion_attr = CenterLoss(num_classes=12,feat_dim=768,use_gpu=True)
     lsoftmaxloss = LSoftMaxLoss(num_classes=12,margin=margin,scale=768)
     arcface = ArcFace(in_features=64,out_features=768,m= margin)
     # train

@@ -35,8 +35,8 @@ if __name__ == "__main__":
         logger.info("Loaded configuration file {}".format(args.config_file))
         with open(args.config_file, 'r') as cf:
             config_str = "\n" + cf.read()
-            logger.info(config_str)
-    logger.info("Running with config:\n{}".format(cfg))
+    #         logger.info(config_str)
+    # logger.info("Running with config:\n{}".format(cfg))
 
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID
 
@@ -47,5 +47,6 @@ if __name__ == "__main__":
         print("==== random param ====")
 
     for testname in cfg.DATASETS.TEST:
-        _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
-        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING, query_aggeregate=cfg.TEST.QUERY_AGGREGATE)
+        query,gallery, val_loader, num_query,other_data = build_reid_test_loader(cfg, testname)
+        do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING,query=query,gallery=gallery,other_data = other_data)
+    

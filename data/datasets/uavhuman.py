@@ -9,6 +9,7 @@
 
 import glob
 import re
+import json
 
 import os.path as osp
 
@@ -49,10 +50,98 @@ class UAVHuman(ImageDataset):
 
         self.train = train
         
-        # """Comment for Competition Splits
+        # # """Comment for Competition Splits
+        # self.query = query
+        # self.gallery = gallery
+        # """
+        # backpack first_attempt
+        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/backpack.json"
+        # with open(file_path,'r') as f:
+        #     load_data = json.load(f)
+        # new_load_data = []
+        # query_dir_for_test = []
+        # gallery_dir_for_test = []
+        # for data in load_data:
+        #     if data['pre_label'] == 4:
+        #         query_dir_for_test.append(data)
+        #     # elif data['pre_label'] in [0,3]:
+        #     elif data['pre_label'] in [0,1,2,3]:
+        #         gallery_dir_for_test.append(data)
+        #     else:
+        #         new_load_data.append(data)
+        # second_attempt
+        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/backpack_after_yellow.json"
+        # with open(file_path,'r') as f:
+        #     load_data = json.load(f)
+        # new_load_data = []
+        # query_dir_for_test = []
+        # gallery_dir_for_test = []
+        # for data in load_data:
+        #     if data['pre_label'] == 3:
+        #         query_dir_for_test.append(data)
+        #     elif data['pre_label'] == 0:
+        #         gallery_dir_for_test.append(data)
+        #     else:
+        #         new_load_data.append(data)
+        
+        # UCC first attempt
+        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/upper_color.json"
+        # with open(file_path,'r') as f:
+        #     load_data = json.load(f)
+        # new_load_data = []
+        # query_dir_for_test = []
+        # gallery_dir_for_test = []
+        # for data in load_data:
+        #     if data['pre_label'] == 1:
+        #         query_dir_for_test.append(data)
+        #     # elif data['pre_label'] in [0,3]:
+        #     # elif data['pre_label'] in [0,2,3,4,5,6,7,8,9,10,11]:
+        #     elif data['pre_label'] in [5,2,10]:
+        #         gallery_dir_for_test.append(data)
+        #     else:
+        #         new_load_data.append(data)
+        
+        # second attempt
+        file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/UCC_after_red.json"
+        with open(file_path,'r') as f:
+            load_data = json.load(f)
+        new_load_data = []
+        query_dir_for_test = []
+        gallery_dir_for_test = []
+        for data in load_data:
+            if data['pre_label'] == 1:
+                query_dir_for_test.append(data)
+            # elif data['pre_label'] in [0,3]:
+            # elif data['pre_label'] in [0,2,3,4,5,6,7,8,9,10,11]:
+            elif data['pre_label'] in [7,10]:
+                gallery_dir_for_test.append(data)
+            else:
+                new_load_data.append(data)
+
+        # LCC first_attempt
+        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/lower_color.json"
+        # with open(file_path,'r') as f:
+        #     load_data = json.load(f)
+        # new_load_data = []
+        # query_dir_for_test = []
+        # gallery_dir_for_test = []
+        # for data in load_data:
+        #     if data['pre_label'] == 9:
+        #         query_dir_for_test.append(data)
+        #     # elif data['pre_label'] in [0,3]:
+        #     elif data['pre_label'] in [2,7]:
+        #         gallery_dir_for_test.append(data)
+        #     else:
+        #         new_load_data.append(data)
+
+        # train = self._process_dir_json(new_load_data,is_train=True)        
+        # query = self._process_dir_json(query_dir_for_test, is_train=False)
+        # gallery = self._process_dir_json(gallery_dir_for_test, is_train=False)
+
+        self.train = train
         self.query = query
         self.gallery = gallery
-        # """
+        # import ipdb;ipdb.set_trace()
 
         self.num_train_pids, self.num_train_imgs, self.num_train_cams = self.get_imagedata_info(self.train)
         
@@ -60,6 +149,7 @@ class UAVHuman(ImageDataset):
         self.num_query_pids, self.num_query_imgs, self.num_query_cams = self.get_imagedata_info(self.query)
         self.num_gallery_pids, self.num_gallery_imgs, self.num_gallery_cams = self.get_imagedata_info(self.gallery)
         # """
+        # super(UAVHuman, self).__init__(train, query, gallery,q_pre_label,q_real_label,g_pre_label,g_real_label, **kwargs)
         super(UAVHuman, self).__init__(train, query, gallery, **kwargs)
 
     def _check_before_run(self):
@@ -75,6 +165,61 @@ class UAVHuman(ImageDataset):
         if not osp.exists(self.gallery_dir):
             raise RuntimeError("'{}' is not available".format(self.gallery_dir))
         """
+
+    def _process_dir_json(self,json_list,is_train=True):
+        img_paths = []
+        pre_label = []
+        real_label = []
+        # pid and camid patterns
+        pattern_pid = re.compile(r'P([-\d]+)S([-\d]+)')
+        pattern_camid = re.compile(r'A([-\d]+)R([-\d])_([-\d]+)_([-\d]+)')
+        distractor_pid = 50000
+        for data in json_list:
+            img_paths.append(data['file_path'])
+            pre_label.append(data['pre_label'])
+            real_label.append(data['real_label'])
+        pid_container = set()
+        for img_path in img_paths:
+            fname = osp.split(img_path)[-1]
+            if fname.startswith('D'):
+                # continue
+                pid = int(distractor_pid)
+            else:
+                pid_part1, pid_part2 = pattern_pid.search(fname).groups()
+                pid = int(pid_part1 + pid_part2)
+            
+            if pid == -1: continue  # junk images are just ignored
+            if pid == 3109 or pid == 8405: 
+                import ipdb; ipdb.set_trace()
+                continue
+
+            pid_container.add(pid)
+        dataset = []
+        for (img_path,pre,real) in zip(img_paths,pre_label,real_label):
+            fname = osp.split(img_path)[-1]
+            if fname.startswith('D'):
+                # continue
+                pid = int(distractor_pid)
+                camid = int(fname[-13:-8])
+            else:
+                pid_part1, pid_part2 = pattern_pid.search(fname).groups()
+                pid = int(pid_part1 + pid_part2)
+                camid_part1, _, _, camid_part2 = pattern_camid.search(fname).groups()
+                camid = int(camid_part1 + camid_part2)
+            if pid == -1: continue  # junk images are just ignored
+            if is_train:
+                pid = self.dataset_name + "_" + str(pid)
+            else:
+                pid = self.dataset_name + "_" + str(pid)
+            attributes = {
+                "pre_label": pre,
+                "real_label": real,
+            }
+            # attributes = None
+            dataset.append((img_path, pid, camid, attributes))
+        return dataset
+            
+            
 
     def _process_dir(self, dir_path, is_train=True):
         img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
@@ -129,9 +274,9 @@ class UAVHuman(ImageDataset):
         # set_gender_number = True
         # set_Backpack_number = True
         # set_Hat_number = True
-        # set_UCC_number = True
+        set_UCC_number = True
         # set_UCS_number = True
-        set_LCC_number = True
+        # set_LCC_number = True
         # set_LCS_number = True
         dataset = []
         for img_path in img_paths:
@@ -186,16 +331,26 @@ class UAVHuman(ImageDataset):
                         gender_number_list[gender] += 1
                 # control backpack number
                 if set_Backpack_number:
-                    if(backpack == 0): # n/a number 4000_1  3000_2
-                        if(backpack_number_list[backpack] > 3000):
+                    if(backpack == 0): # n/a number 4000_1  3000_2  2000_3 1000_4
+                        if(backpack_number_list[backpack] > 500):
                             continue
                         else:
                             backpack_number_list[backpack] += 1
-                    elif(backpack == 4): # yellow number * 2_1 *3_2
+                    elif(backpack == 4): # yellow number * 2_1 *3_2 *4_5 *5_6
+                        backpack_number_list[backpack] += 1
+                        backpack_number_list[backpack] += 1
                         backpack_number_list[backpack] += 1
                         backpack_number_list[backpack] += 1
                         backpack_number_list[backpack] += 1
                         dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                    elif(backpack == 3): # green number * 2_3 *3_5
+                        backpack_number_list[backpack] += 1
+                        backpack_number_list[backpack] += 1
+                        # backpack_number_list[backpack] += 1
+                        # dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                     else:
                         backpack_number_list[backpack] += 1
@@ -227,47 +382,55 @@ class UAVHuman(ImageDataset):
                         LCS_number_list[lower_style] += 1
                 # control UCC number
                 if set_UCC_number:
-                    if(upper_color == 7): # white 1000
+                    if(upper_color == 7): # white 1000_1
                         if(UCC_number_list[upper_color] > 1000):
                             continue
                         else:
                             UCC_number_list[upper_color] += 1
-                    elif upper_color == 3: # blue 100
+                    elif upper_color == 3: # blue 100_1
                         if(UCC_number_list[upper_color] > 100):
                             continue
                         else:
                             UCC_number_list[upper_color] += 1
-                    elif upper_color == 6: # grey * 2
-                        UCC_number_list[upper_color] += 1
-                        UCC_number_list[upper_color] += 1
-                        dataset.append((img_path, pid, camid, attributes))
-                    elif upper_color == 1: # red * 8
-                        UCC_number_list[upper_color] += 1
-                        UCC_number_list[upper_color] += 1
-                        UCC_number_list[upper_color] += 1
-                        UCC_number_list[upper_color] += 1
-                        UCC_number_list[upper_color] += 1
+                    elif upper_color == 6: # grey * 2_1 *3_5
                         UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
+                    elif upper_color == 1: # red * 4_1 * 8_3 *10_4 *8_5
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
+                        # UCC_number_list[upper_color] += 1
+                        # UCC_number_list[upper_color] += 1
+                        # UCC_number_list[upper_color] += 1
+                        # UCC_number_list[upper_color] += 1
+                        # UCC_number_list[upper_color] += 1
+                        # UCC_number_list[upper_color] += 1
+                        # dataset.append((img_path, pid, camid, attributes))
+                        # dataset.append((img_path, pid, camid, attributes))
+                        # dataset.append((img_path, pid, camid, attributes))
+                        # dataset.append((img_path, pid, camid, attributes))
+                        # dataset.append((img_path, pid, camid, attributes))
+                        # dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
-                        dataset.append((img_path, pid, camid, attributes))
-                        dataset.append((img_path, pid, camid, attributes))
-                    elif upper_color == 2: # black 1000
-                        if(UCC_number_list[upper_color] > 1000):
+                    elif upper_color == 2: # black 2000_1  1000_3 1000_5
+                        if(UCC_number_list[upper_color] > 2000):
                             continue
                         else:
                             UCC_number_list[upper_color] += 1
-                    elif upper_color == 4: # green 100
+                    elif upper_color == 4: # green 100_2
                         if(UCC_number_list[upper_color] > 100):
                             continue
                         else:
                             UCC_number_list[upper_color] += 1
-                    elif upper_color == 11: # pink * 5
+                    elif upper_color == 11: # pink * 5_2
+                        UCC_number_list[upper_color] += 1
+                        UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
@@ -277,7 +440,9 @@ class UAVHuman(ImageDataset):
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
-                    elif upper_color == 5: # multicolor 200
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                    elif upper_color == 5: # multicolor 200_3
                         if(UCC_number_list[upper_color] > 200):
                             continue
                         else:
@@ -286,23 +451,33 @@ class UAVHuman(ImageDataset):
                         UCC_number_list[upper_color] += 1
                 # control LCC number
                 if set_LCC_number:
-                    if(lower_color == 6): # grey 100
+                    if(lower_color == 6): # grey 100_1
                         if(LCC_number_list[lower_color] > 100):
                             continue
                         else:
                             LCC_number_list[lower_color] += 1
-                    # elif(lower_color == 2): # black 3000
-                    #     if(LCC_number_list[lower_color] > 3000):
+                    # elif(lower_color == 2): # black 3000_2 5000_6
+                    #     if(LCC_number_list[lower_color] > 5000):
                     #         continue
                     #     else:
                     #         LCC_number_list[lower_color] += 1
-                    elif(lower_color == 9): # dark brown * 2_1 *3_2 *4_3
+                    elif(lower_color == 9): # dark brown * 2_2 *3_3 *4_4 *3_5
+                        LCC_number_list[lower_color] += 1
                         LCC_number_list[lower_color] += 1
                         LCC_number_list[lower_color] += 1
                         LCC_number_list[lower_color] += 1
                         LCC_number_list[lower_color] += 1
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                        dataset.append((img_path, pid, camid, attributes))
+                    elif(lower_color == 3): # blue * 2_5
+                        LCC_number_list[lower_color] += 1
+                        LCC_number_list[lower_color] += 1
+                        # LCC_number_list[lower_color] += 1
+                        # LCC_number_list[lower_color] += 1
+                        # dataset.append((img_path, pid, camid, attributes))
+                        # dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                     else:
                         LCC_number_list[lower_color] += 1
@@ -337,13 +512,13 @@ class UAVHuman(ImageDataset):
             # if relabel: pid = pid2label[pid] # relabel in common.py
             dataset.append((img_path, pid, camid, attributes))
         if is_train:
-            print(f"Gender_number_list: {gender_number_list}")
-            print(f"Backpack_number_list: {backpack_number_list}")
-            print(f"Hat_number_list: {hat_number_list}")
-            print(f"UCC_number_list: {UCC_number_list}")
-            print(f"UCS_number_list: {UCS_number_list}")
-            print(f"LCC_number_list: {LCC_number_list}")
-            print(f"LCS_number_list: {LCS_number_list}")
+            print(f"Gender_number_list: {gender_number_list}, sum: {sum(gender_number_list)}")
+            print(f"Backpack_number_list: {backpack_number_list}, sum: {sum(backpack_number_list)}")
+            print(f"Hat_number_list: {hat_number_list}, sum: {sum(hat_number_list)}")
+            print(f"UCC_number_list: {UCC_number_list}, sum: {sum(UCC_number_list)}")
+            print(f"UCS_number_list: {UCS_number_list}, sum: {sum(UCS_number_list)}")
+            print(f"LCC_number_list: {LCC_number_list}, sum: {sum(LCC_number_list)}")
+            print(f"LCS_number_list: {LCS_number_list}, sum: {sum(LCS_number_list)}")
         return dataset
 
     def get_imagedata_info(self, data):

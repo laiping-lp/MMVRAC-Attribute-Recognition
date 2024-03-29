@@ -24,7 +24,6 @@ if __name__ == "__main__":
         cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
-
     output_dir = os.path.join(cfg.LOG_ROOT, cfg.LOG_NAME)
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -47,8 +46,24 @@ if __name__ == "__main__":
         logger.info(f"Loading model: =======> {cfg.TEST.WEIGHT}")
     else:
         print("==== random param ====")
+    
+    weight_name = os.path.basename(cfg.TEST.WEIGHT)
+    if "Gender" in weight_name:
+        names = ['gender']
+    elif 'Backpack' in weight_name:
+        names = ['backpack']
+    elif "Hat" in weight_name:
+        names = ['hat']
+    elif "UCC" in weight_name:
+        names = ['upper_color']
+    elif "UCS" in weight_name:
+        names = ['upper_style']
+    elif "LCC" in weight_name:
+        names = ['lower_color']
+    elif "LCS" in weight_name:
+        names = ['lower_style']
 
     for testname in cfg.DATASETS.TEST:
-        _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
+        _, _, val_loader, num_query,_ = build_reid_test_loader(cfg, testname)
         logger.info("=== attribute recognition result ===")
-        do_inference_only_attr(cfg, model, val_loader)
+        do_inference_only_attr(cfg, model, val_loader,names=names)

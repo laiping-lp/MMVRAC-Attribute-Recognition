@@ -40,7 +40,8 @@ class ArcFace(nn.Module):
         phi = torch.where(cosine > self.th, phi, cosine - self.mm)
         # --------------------------- convert label to one-hot ---------------------------
         # one_hot = torch.zeros(cosine.size(), requires_grad=True, device='cuda')
-        one_hot = torch.zeros((64,12), device='cuda')
+        # one_hot = torch.zeros((64,12), device='cuda') # LCC
+        one_hot = torch.zeros((64,5), device='cuda') # backpack
         one_hot.scatter_(1, label.view(-1, 1).long(), 1)
         # import ipdb;ipdb.set_trace()
         # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------

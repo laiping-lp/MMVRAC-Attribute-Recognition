@@ -81,6 +81,7 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
     if_focal_loss = cfg.LOSS.FOCAL_LOSS
     # if_focal_loss = True
     if_logsoftmax_with_center_loss = cfg.LOSS.LOGSOFTMAX_CENTER_LOSS
+    if_logsoftmax_with_center_loss_attr = cfg.LOSS.LOGSOFTMAX_CENTER_LOSS_ATTR
     # if_logsoftmax_with_center_loss = True
     if_arcface = cfg.LOSS.ARCFACE 
     if_LSoftmax_loss = cfg.LOSS.LSOFTMAX_LOSS
@@ -90,13 +91,14 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
     if_only_UCC_center_loss = False
     if_only_UCC_UCS_center_loss = False
     # if_only_UCC_center_loss = True 
-    logger.info(f"if_focal_loss:{if_focal_loss}, if_logsoftmax_with_center_loss:{if_logsoftmax_with_center_loss}, if_arcface:{if_arcface}, if_LSoftmax_loss:{if_LSoftmax_loss}")
+    logger.info(f"if_focal_loss:{if_focal_loss}, if_arcface:{if_arcface}, if_LSoftmax_loss:{if_LSoftmax_loss}")
+    logger.info(f"if_logsoftmax_with_center_loss:{if_logsoftmax_with_center_loss},if_logsoftmax_with_center_loss_attr:{if_logsoftmax_with_center_loss_attr}")
     logger.info(f"if_only_LCC_center_loss:{if_only_LCC_center_loss},if_only_UCC_center_loss:{if_only_UCC_center_loss}")
     if if_focal_loss:
         logger.info(f'focal loss parameters:  alpha: {alpha}, gamma: {gamma}, reduction: {reduction}, scale: {scale}')
-    if cfg.LOSS.LOGSOFTMAX_CENTER_LOSS_ATTR:
+    if if_logsoftmax_with_center_loss_attr:
         center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
-    elif cfg.LOSS.LOGSOFTMAX_CENTER_LOSS:
+    elif if_logsoftmax_with_center_loss:
         center_criterion_attr = CenterLoss(num_classes=12,feat_dim=768,use_gpu=True)
     margin = cfg.LOSS.L_MARGIN
     lsoftmaxloss = LSoftMaxLoss(num_classes=12,margin=margin,scale=768)
@@ -156,8 +158,8 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
                     elif if_logsoftmax_with_center_loss:
                         # print("======> logsoftmax")
                         attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
-                        # loss_center_attr =  center_criterion_attr(feat,attributes[5])  
-                        loss_center_attr =  center_criterion_attr(feat,attributes[5]) 
+                        # loss_center_attr =  center_criterion_attr(feat,attributes[5]) # LCC loss
+                        loss_center_attr =  center_criterion_attr(feat,attributes[1]) # backpack loss
 
                         loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
                         loss_attr = sum([l.mean(0).sum() for l in loss_attr])
@@ -166,25 +168,12 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
                         # import ipdb;ipdb.set_trace()
                     elif if_arcface:
                         # print("=====> L-SoftMax")
-                        # import ipdb;ipdb.set_trace()
-                        # lambd = cfg.SOLVER.LAMDB
-                        # lsoftmax_loss_attr = lsoftmaxloss(feat,attributes[5],attr_targets[5],distance_scale=4)
-                        # l_arcface_loss = 0.0
-                        # for i in range(7):
-                        l_arcface_loss = arcface(feat,attributes[5])
+                        # l_arcface_loss = arcface(feat,attributes[5]) # LCC
+                        l_arcface_loss = arcface(feat,attributes[1]) #backpack
                         attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
                         loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
                         loss_attr = sum([l.mean(0).sum() for l in loss_attr])
                         loss_attr += l_arcface_loss
-                        # loss_attr += lsoftmax_loss_attr
-                        # for (attr_score,attribute) in zip(attr_scores,attributes):
-                        #     m_vextor = torch.zeros_like(attr_score)
-                        #     m_vextor.scatter_(1,attribute.view(-1,1),1-lambd)
-                        #     l_softmax_logits = attr_score - m_vextor
-                        #     loss_attr += nn.functional.cross_entropy(l_softmax_logits,attribute)
-                        # import ipdb;ipdb.set_trace()
-                        # if(l_arcface_loss.item() != 0.0):
-                        #     print("arcface_loss:",l_arcface_loss)
                     elif if_LSoftmax_loss:
                         # print("=====> L-SoftMax")
                         lsoftmax_loss_attr = lsoftmaxloss(feat,attributes[5],attr_targets[5],distance_scale=3)
