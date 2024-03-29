@@ -9,6 +9,7 @@ from tqdm import tqdm
 from PIL import Image
 import matplotlib.pyplot as plt
 import shutil
+from utils.faiss_rerank import compute_jaccard_distance
 
 def normalize(x, axis=-1):
     """Normalizing to unit length along the specified dimension.
@@ -126,9 +127,9 @@ def eval_func_make_new_json(distmat, max_rank=50, query=None, gallery=None, log_
         # if i == 50:
         #     break
         
-        for index_ in index[:10]: 
+        for index_ in index[:1000]: 
             # import ipdb;ipdb.set_trace()
-            if(distmat[i][index_]) < 0.3: 
+            if(distmat[i][index_]) < 1.1: 
     # # UCS
     # # long find in short
     # # hat #### 5 0.3 acc=83.46 ####
@@ -147,7 +148,7 @@ def eval_func_make_new_json(distmat, max_rank=50, query=None, gallery=None, log_
     # # 20 1.0 acc=65.17 #20 0.7 acc=65.79
     # # red find in 5,2,11 #20 0.7 acc=65.84
     # # red find in 5,2,10 ##20 0.7 acc=65.84 # 20 0.6 acc=
-    # # red find in other #20 0.7 acc=66.06 #100 0.7 acc=66.37 #200 0.7 acc=66.34 # 100 1.0 acc=63.91 #100 0.3 acc=65.63  
+    # # red find in other #20 0.7 acc=66.06 #100 0.7 acc=66.37 #200 0.7 acc=66.34 # 100 1.0 acc=63.91 #100 0.3 acc=65.63  # 1000 0.8 acc=66.56 # 1000 1.1 acc=54.3
     # # red find in 5,2,10 # 500 0.9 acc=68.54 #1000 0.9 acc=68.54 # 1000 0.95 acc=70.13 #1000 1.0 acc=70.06 #2000 0.95 acc=70.13 
     # # red find in 5,2,10 #2000 0.75 acc=66.27 ##### 1000 1.1 acc=71.92###### # 2000 1.1 acc=69.40 #500 acc=69.99
     # # red find in 5 2 7 10 # 1000 1.1 acc=65.74 #500 1.1 acc=66.50 #200 0.95 acc=66.24
@@ -188,7 +189,82 @@ def eval_func_make_new_json(distmat, max_rank=50, query=None, gallery=None, log_
     # with open("/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/backpack_after_yellow_after_green.json",'w') as f_1:
     #     json.dump(new_load_data,f_1)
     
+def eval_func_make_new_json_1(distmat,num_query=None, max_rank=50, query=None, gallery=None, log_path=None,gen_result=False,other_data=None):
+    num_q, num_g = distmat.shape
+    if num_g < max_rank:
+        max_rank = num_g
+        print("Note: number of gallery samples is quite small, got {}".format(num_g))
+    indices = np.argsort(distmat, axis=1)
+    
+    new_load_data = []
+    new_gallery_data = []
+    remain_gallery_data = []
+    for data in other_data:
+        new_data = {
+            "file_path":"",
+            "pre_label":"",
+            "real_label":"" 
+        }
+        new_data["file_path"] = data[0]
+        new_data['pre_label'] = data[3]['pre_label']
+        new_data['real_label'] = data[3]['real_label']
+        new_load_data.append(new_data)
+    for data in query:
+        new_data = {
+            "file_path":"",
+            "pre_label":"",
+            "real_label":"" 
+        }
+        new_data["file_path"] = data[0]
+        new_data['pre_label'] = data[3]['pre_label']
+        new_data['real_label'] = data[3]['real_label']
+        new_load_data.append(new_data)
+    index_flag = [1] * len(distmat)
 
+    for i,(query_,index) in enumerate(zip(query,indices)):
+        new_data = {
+            "file_path":"",
+            "pre_label":"",
+            "real_label":"" 
+        }
+        # UCC
+        # 5000 1.0 acc=65.663 # 2000 1.0 acc=
+        for index_ in index[:1000]: 
+            # import ipdb;ipdb.set_trace()
+            if index_ >= num_query:
+                if(distmat[i][index_]) < 1.0: 
+                    # import ipdb;ipdb.set_trace()
+                    if index_flag[index_] ==  1:
+                        new_data["file_path"] = gallery[index_-num_query][0]
+                        new_data['pre_label'] = query_[3]['pre_label']
+                        new_data['real_label'] = gallery[index_-num_query][3]['real_label']
+                        new_load_data.append(new_data)
+                        index_flag[index_] = 0
+                    elif index_flag[index_] == 0:
+                        continue
+    for i in range(num_query,len(distmat)):
+        # import ipdb;ipdb.set_trace()
+
+        new_data = {
+            "file_path":"",
+            "pre_label":"",
+            "real_label":"" 
+        }
+        if(index_flag[i] == 1):
+            new_data["file_path"] = gallery[i-num_query][0]
+            new_data['pre_label'] = gallery[i-num_query][3]['pre_label']
+            new_data['real_label'] = gallery[i-num_query][3]['real_label']
+            new_load_data.append(new_data) 
+           
+    print(len(new_load_data))
+    acc_count = 0
+    for data in new_load_data:
+        if(data['pre_label'] == data['real_label']):
+            acc_count += 1
+            
+    print("accuracy: ",acc_count * 100 / len(new_load_data))
+    # with open("/data3/laiping/recurrence/ALL_best_model/attr_with_reid/Hat_new.json",'w') as f_1:
+    #     json.dump(new_load_data,f_1)
 
 
 def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=None, gallery=None, log_path=None,gen_result=False):
@@ -452,8 +528,13 @@ class R1_mAP_eval():
             distmat = euclidean_dist(qf, gf)
         if self.query_aggregate:
             distmat = query_aggregate(distmat, q_pids)
+        # features, _ = extract_features(model, cluster_loader, print_freq=50)
+        # features = torch.cat([features[f].unsqueeze(0) for f, _, _ in sorted(dataset.train)], 0)
+        rerank_dist = compute_jaccard_distance(feats, k1=4, k2=4)
+        eval_func_make_new_json_1(rerank_dist,num_query = self.num_query , query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result,other_data= self.other_data)
+        
         cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result)
-        eval_func_make_new_json(distmat,query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result,other_data= self.other_data)
+        # eval_func_make_new_json(distmat,query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result,other_data= self.other_data)
         return cmc, mAP, distmat, self.pids, self.camids, qf, gf
     
     

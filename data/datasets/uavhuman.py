@@ -85,21 +85,21 @@ class UAVHuman(ImageDataset):
         #         new_load_data.append(data)
         
         # UCC first attempt
-        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/upper_color_all.json"
-        # with open(file_path,'r') as f:
-        #     load_data = json.load(f)
-        # new_load_data = []
-        # query_dir_for_test = []
-        # gallery_dir_for_test = []
-        # for data in load_data:
-        #     if data['pre_label'] == 1:
-        #         query_dir_for_test.append(data)
-        #     # elif data['pre_label'] in [0,3]:
-        #     # elif data['pre_label'] in [0,2,3,4,5,6,7,8,9,10,11]:
-        #     elif data['pre_label'] in [5,2,10]:
-        #         gallery_dir_for_test.append(data)
-        #     else:
-        #         new_load_data.append(data)
+        file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/upper_color_all.json"
+        with open(file_path,'r') as f:
+            load_data = json.load(f)
+        new_load_data = []
+        query_dir_for_test = []
+        gallery_dir_for_test = []
+        for data in load_data:
+            if data['pre_label'] == 1:
+                query_dir_for_test.append(data)
+            # elif data['pre_label'] in [0,3]:
+            # elif data['pre_label'] in [0,2,3,4,5,6,7,8,9,10,11]:
+            elif data['pre_label'] in [5,2,10,7]:
+                gallery_dir_for_test.append(data)
+            else:
+                new_load_data.append(data)
         
         # second attempt
         # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_with_reid/UCC_new1.json"
@@ -151,20 +151,20 @@ class UAVHuman(ImageDataset):
         #         new_load_data.append(data)
 
         # UCS first attempt
-        file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/upper_style_all.json"
-        with open(file_path,'r') as f:
-            load_data = json.load(f)
-        new_load_data = []
-        query_dir_for_test = []
-        gallery_dir_for_test = []
-        for data in load_data:
-            if data['pre_label'] == 1:
-                query_dir_for_test.append(data)
-            # elif data['pre_label'] in [0,3]:
-            elif data['pre_label'] in [2]:
-                gallery_dir_for_test.append(data)
-            else:
-                new_load_data.append(data)
+        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/upper_style_all.json"
+        # with open(file_path,'r') as f:
+        #     load_data = json.load(f)
+        # new_load_data = []
+        # query_dir_for_test = []
+        # gallery_dir_for_test = []
+        # for data in load_data:
+        #     if data['pre_label'] == 1:
+        #         query_dir_for_test.append(data)
+        #     # elif data['pre_label'] in [0,3]:
+        #     elif data['pre_label'] in [2]:
+        #         gallery_dir_for_test.append(data)
+        #     else:
+        #         new_load_data.append(data)
                 
         # LCS first attempt
         # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/lower_style_all.json"
@@ -183,7 +183,7 @@ class UAVHuman(ImageDataset):
         #         new_load_data.append(data)
 
 
-        # train = self._process_dir_json(new_load_data,is_train=True)        
+        train = self._process_dir_json(new_load_data,is_train=True)        
         query = self._process_dir_json(query_dir_for_test, is_train=False)
         gallery = self._process_dir_json(gallery_dir_for_test, is_train=False)
 
