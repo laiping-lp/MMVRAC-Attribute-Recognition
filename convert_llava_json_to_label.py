@@ -12,7 +12,7 @@ pattern_upper = re.compile(r'UC([-\d]+)')
 pattern_lower = re.compile(r'LC([-\d]+)')
 pattern_action = re.compile(r'A([-\d]+)')
 
-file_path_1 = "//data3/laiping/datasets/UAVHuman/llava-attr/Gender_Backpack_Hat_UAVHuman_test.json"
+file_path_1 = "/data3/laiping/datasets/UAVHuman/llava-attr/Gender_Backpack_Hat_UAVHuman_test.json"
 file_path_2 = "/data3/laiping/datasets/UAVHuman/llava-attr/UCC_UCS_UAVHuman_test.json"
 file_path_3 = "/data3/laiping/datasets/UAVHuman/llava-attr/LCC_LCS_UAVHuman_test.json"
 
