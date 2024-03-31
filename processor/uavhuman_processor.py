@@ -73,27 +73,10 @@ def attr_vit_do_train_with_amp(cfg,
     center_weight = cfg.SOLVER.CENTER_LOSS_WEIGHT
 
     best = 0.0
-    # best_attr = 0.0
     best_index = 1
-    # best_attr_index = 1
     best_attr = [0.0] * 7
     best_attr_index = [1] * 7
     name = ['Gender','Backpack','Hat','UCC','UCS',"LCC",'LCS']
-    margin = cfg.LOSS.L_MARGIN
-    if_logsoftmax_with_center_loss = cfg.LOSS.LOGSOFTMAX_CENTER_LOSS
-    if_logsoftmax_with_center_loss_attr = cfg.LOSS.LOGSOFTMAX_CENTER_LOSS_ATTR
-    if_L_softmax = cfg.LOSS.LSOFTMAX_LOSS
-    if_only_UCC_center_loss = False
-    # if_only_UCC_center_loss = True 
-    logger.info(f"if_logsoftmax_with_center_loss:{if_logsoftmax_with_center_loss},if_logsoftmax_with_center_loss_attr:{if_logsoftmax_with_center_loss_attr}")
-    logger.info(f"if_L_softmax: {if_L_softmax}")
-    logger.info(f"if_only_UCC_center_loss:{if_only_UCC_center_loss}")
-    if if_logsoftmax_with_center_loss_attr:
-        center_criterion_attr = CenterLossAttr(num_classes=12,feat_dim=768,use_gpu=True)
-    elif if_logsoftmax_with_center_loss:
-        center_criterion_attr = CenterLoss(num_classes=12,feat_dim=768,use_gpu=True)
-    lsoftmaxloss = LSoftMaxLoss(num_classes=12,margin=margin,scale=768)
-    arcface = ArcFace(in_features=64,out_features=768,m= margin)
     # train
     for epoch in range(1, epochs + 1):
         start_time = time.time()
@@ -161,32 +144,10 @@ def attr_vit_do_train_with_amp(cfg,
                 # loss_attr += lsoftmax_loss_attr
                 # import ipdb; ipdb.set_trace()
                 
-                if if_logsoftmax_with_center_loss:
-                    # print("======> logsoftmax")
-                    attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
-                    loss_center_attr =  center_criterion_attr(feat,attributes[5])   
-                    loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
-                    loss_attr = sum([l.mean(0).sum() for l in loss_attr])
-                    loss_attr += loss_center_attr * center_weight_attr
-                elif if_L_softmax:
-                    # print("=====> L-SoftMax")
-                    lsoftmax_loss_attr = lsoftmaxloss(feat,attributes[5],attr_targets[5],distance_scale=3)
-                    attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
-                    loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
-                    loss_attr = sum([l.mean(0).sum() for l in loss_attr])
-                    loss_attr += lsoftmax_loss_attr
-                elif if_only_UCC_center_loss:
-                    attr_log_probs = nn.LogSoftmax(dim=1)(attr_scores[3])  # attr
-                    loss_center_attr =  center_criterion_attr(feat,attributes[3])  
-
-                    loss_attr = -attr_targets[3] * attr_log_probs[3]
-                    loss_attr = sum([l.mean(0).sum() for l in loss_attr])
-                    loss_attr += loss_center_attr * center_weight_attr
-                    # import ipdb;ipdb.set_trace()
-                else:
-                    attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
-                    loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
-                    loss_attr = sum([l.mean(0).sum() for l in loss_attr])
+                
+                attr_log_probs = [nn.LogSoftmax(dim=1)(s) for s in attr_scores] # attr
+                loss_attr = [-attr_targets[i] * attr_log_probs[i] for i in range(7)]
+                loss_attr = sum([l.mean(0).sum() for l in loss_attr])
 
 
                 #### triplet loss
@@ -304,14 +265,4 @@ def attr_vit_do_train_with_amp(cfg,
     logger.info('\n' + str(table))
     logger.info("=====best accuracy: {:.2%}=====".format(sum(best_attr)))
     logger.info(f"=======save path: {log_path} =======")
-    # # final evaluation
-    # load_path = os.path.join(log_path, cfg.MODEL.NAME + '_best.pth')
-    # # eval_model = make_model(cfg, modelname=cfg.MODEL.NAME, num_class=0)
-    # model.load_param(load_path)
-    # logger.info('load weights from best.pth')
-    # if 'DG' in cfg.DATASETS.TEST[0]:
-    #     do_inference_multi_targets(cfg, model, logger)
-    # else:
-    #     for testname in cfg.DATASETS.TEST:
-    #         _, _, val_loader, num_query = build_reid_test_loader(cfg, testname)
-    #         do_inference(cfg, model, val_loader, num_query, reranking=cfg.TEST.RE_RANKING)
+    

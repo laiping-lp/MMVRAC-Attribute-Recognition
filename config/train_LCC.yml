@@ -1,28 +1,15 @@
 MODEL:
   PRETRAIN_CHOICE: 'imagenet' # imagenet, LUP
-  PRETRAIN_PATH: "/data4/liyuke/checkpoint/jx_vit_base_p16_224-80ecf9dd.pth"
-  # PRETRAIN_PATH: "/data3/laiping/humanbench-model/vit_base.pth" # root of pretrain path
-  # PRETRAIN_PATH: "/data3/laiping/humanbench-model/vit_large.pth" # root of pretrain path
-  # PRETRAIN_PATH: "/data3/laiping/humanbench-model/vit_large_new.pth" # root of pretrain path
-  # PRETRAIN_PATH: "/home/liyuke/data4/checkpoint/swin_base_patch4_window7_224_22k.pth" # root of pretrain path
+  PRETRAIN_PATH: "/data4/xxxxx/checkpoint/jx_vit_base_p16_224-80ecf9dd.pth"
   METRIC_LOSS_TYPE: 'triplet_center' # triplet, triplet_center
   # DIM: 1024 # current model dim
   DIM: 768
   # DIM: 1024
   IF_LABELSMOOTH: 'on'
   NAME: 'only_attribute_recognition' #'attr_vit' # only_attr_vit_cls attr_vit vit
-  # NAME: "attr_vit"
-  # local_attention_vit, mask_vit, mae, DG_ssl_vit, color_vit, rotate_vit, resnet50, ibnnet50b, vit, distill_vit, prompt_vit, mix_vit, mem_vit, mem_tri_vit, mix_resnet, mix_ibnnet50a, mix_ibnnet50b
   NO_MARGIN: True
   DEVICE_ID: ('2')
-  # TRANSFORMER_TYPE: 'swin_base_patch4_window7_224' #attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID, vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
-  # TRANSFORMER_TYPE: 'attr_vit_large_patch16_224_TransReID' #attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID, vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
-  # TRANSFORMER_TYPE: 'attr_vit_base_patch16_224_TransReID' 
-  # TRANSFORMER_TYPE: "only_attr_vit_large_patch16_224_TransReID" # only_attr_vit_base_patch16_224_TransReID
   TRANSFORMER_TYPE: "only_attr_vit_base_patch16_224_TransReID" # 
-  #attr_vit_base_patch16_224_TransReID, attr_vit_large_patch16_224_TransReID, vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
-  # TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID' # vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
-  # TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID' # vit_large_humanbench, vit_large_patch16_224_TransReID, vit_base_patch16_224_TransReID, vit_base_patch32_224_TransReID, deit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID, deit_tiny_patch16_224_TransReID, swin_base_patch4_window7_224, swin_small_patch4_window7_224, dhvt_tiny_patch16, dhvt_small_patch16
   STRIDE_SIZE: 12
   DROP_PATH: 0.1 ###### avoid overfitting
   # FREEZE_PATCH_EMBED: True
@@ -53,7 +40,7 @@ INPUT:
 DATASETS:
   TRAIN: ('UAVHuman',)
   TEST: ('UAVHuman',)
-  ROOT_DIR: ('/data4/liyuke') # root of datasets
+  ROOT_DIR: ('/data4/xxxx') # root of datasets
 
 DATALOADER:
   SAMPLER: 'softmax_triplet' # softmax_triplet, graph_sampler, single_domain, center_hard_sampler
@@ -63,13 +50,8 @@ DATALOADER:
 
 SOLVER:
   OPTIMIZER_NAME: 'AdamW' # AdamW, SAM
-  # OPTIMIZER_NAME: 'SGD' # AdamW, SAM
   MAX_EPOCHS: 20 # 60 for reid # 15 for attr_re
   BASE_LR: 0.000035 # for AdamW
-  # BASE_LR: 0.01 # for SGD /
-  # BASE_LR: 0.0001 # 0.0004 for msmt
-  # BASE_LR: 0.0005 # humanbench vit_large
-  # BASE_LR: 0.01 # humanbench vit_base
   IMS_PER_BATCH: 64
   LARGE_FC_LR: False
   CHECKPOINT_PERIOD: 5
@@ -87,20 +69,6 @@ TEST:
   # RE_RANKING: True # False
   RE_RANKING: False #True # False
   QUERY_AGGREGATE: False #True
- 
-  WEIGHT: '/data3/laiping/UCC/only_attribute_recognition_best.pth'
-  # WEIGHT: '/data3/laiping/vit_base_attr_vit_SGD_1e_2_UCS/attr_vit_best.pth'
-  # WEIGHT: '/data3/laiping/vit_base_only_attribute_recognition_AWamW_3e5_center_loss_4/only_attribute_recognition_best.pth'
-  # WEIGHT: '/data3/laiping/vit_base_only_attribute_recognition_AWamW_3e-5/only_attribute_recognition_best.pth'
-  # WEIGHT: '/data3/laiping/vit_base_only_attribute_recognition_AWamW_35e5_focal_loss_sum_5/only_attribute_recognition_best.pth'
-  # WEIGHT: '/data3/laiping/vit_base_only_attribute_recognition_arcface_grey_2/only_attribute_recognition_best.pth'
-  # WEIGHT: '/data3/laiping/vit_base_only_attribute_recognition_center_loss_grey_3/only_attribute_recognition_best.pth'
-  # WEIGHT: '/data3/laiping/exp/uavhuman_vit_base_attr_AWamw_only_attr_vit_cls_3e5/only_attr_vit_cls_best.pth'
-  # WEIGHT: '/data3/laiping/exp/vit_base_attr_vit_SGD_1e_2_center_loss_grey_1/attr_vit_best.pth'
-  # WEIGHT: '/data3/laiping/exp/vit_base_attr_vit_SGD_1e_2_UCS_center_loss/attr_vit_best.pth'
-  # WEIGHT: '/data3/laiping/test/only_attribute_recognition_best.pth'
-
-
   NECK_FEAT: 'before'
   FEAT_NORM: True
   ATTRIBUTE_RECOGNITION: True
@@ -109,16 +77,7 @@ LOG_ROOT: '/data3/laiping/recurrence/' # root of log file
 TB_LOG_ROOT: './tb_log/'
 
 
-LOG_NAME: 'LCC_control_number_5'
-# LOG_NAME: 'vit_base_only_attribute_recognition_AWamW_3e5_center_loss_4'
-# LOG_NAME: 'vit_base_attr_vit_SGD_1e_2_UCC'
-# LOG_NAME: 'vit_base_only_attribute_recognition_AWamW_3e5_3'
-# LOG_NAME: 'vit_base_only_attribute_recognition_AWamW_3e-5'
-# LOG_NAME: 'vit_base_only_attribute_recognition_AWamW_35e5_focal_loss_sum_5'
-# LOG_NAME: 'vit_base_only_attribute_recognition_arcface_grey_2'
-# LOG_NAME: 'vit_base_only_attribute_recognition_center_loss_grey_3'
-# LOG_NAME: 'test'
-# 
+LOG_NAME: 'LCC_BEST'
 
 LOSS:
   FOCAL_LOSS: False

@@ -98,17 +98,17 @@ def do_inference(cfg,
         logger.info("number of images per sec: {:.2f}img/s".format(num_imgs_per_sec))
 
     cmc, mAP, _, _, _, _, _ = evaluator.compute()
-    if iflog:
-        logger.info("Validation Results ")
-        table = PrettyTable(["task", "mAP", "R1", "R5", "R10"])
-        table.add_row(['Reid', mAP, cmc[0],cmc[4], cmc[9]])
-        table.custom_format["R1"] = lambda f, v: f"{v:.2%}"
-        table.custom_format["R5"] = lambda f, v: f"{v:.2%}"
-        table.custom_format["R10"] = lambda f, v: f"{v:.2%}"
-        table.custom_format["mAP"] = lambda f, v: f"{v:.2%}"
-        logger.info('\n' + str(table))
-        logger.info("total inference time: {:.2f}".format(time.time() - t0))
-    return cmc, mAP
+    # if iflog:
+    #     logger.info("Validation Results ")
+    #     table = PrettyTable(["task", "mAP", "R1", "R5", "R10"])
+    #     table.add_row(['Reid', mAP, cmc[0],cmc[4], cmc[9]])
+    #     table.custom_format["R1"] = lambda f, v: f"{v:.2%}"
+    #     table.custom_format["R5"] = lambda f, v: f"{v:.2%}"
+    #     table.custom_format["R10"] = lambda f, v: f"{v:.2%}"
+    #     table.custom_format["mAP"] = lambda f, v: f"{v:.2%}"
+    #     logger.info('\n' + str(table))
+    #     logger.info("total inference time: {:.2f}".format(time.time() - t0))
+    # return cmc, mAP
 
 def do_inference_only_attr(cfg,
                  model,

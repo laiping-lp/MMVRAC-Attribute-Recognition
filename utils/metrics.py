@@ -10,6 +10,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import shutil
 from utils.faiss_rerank import compute_jaccard_distance
+import re
+import os
 
 def normalize(x, axis=-1):
     """Normalizing to unit length along the specified dimension.
@@ -58,21 +60,17 @@ def eval_func_make_new_json(distmat, max_rank=50, query=None, gallery=None, log_
         max_rank = num_g
         print("Note: number of gallery samples is quite small, got {}".format(num_g))
     indices = np.argsort(distmat, axis=1)
-    # import ipdb;ipdb.set_trace()
-    
     new_load_data = []
-    new_gallery_data = []
-    remain_gallery_data = []
-    # for data in other_data:
-        # new_data = {
-        #     "file_path":"",
-        #     "pre_label":"",
-        #     "real_label":"" 
-        # }
-        # new_data["file_path"] = data[0]
-        # new_data['pre_label'] = data[3]['pre_label']
-        # new_data['real_label'] = data[3]['real_label']
-        # new_load_data.append(new_data)
+    for data in other_data:
+        new_data = {
+            "file_path":"",
+            "pre_label":"",
+            "real_label":"" 
+        }
+        new_data["file_path"] = data[0]
+        new_data['pre_label'] = data[3]['pre_label']
+        new_data['real_label'] = data[3]['real_label']
+        new_load_data.append(new_data)
     for data in query:
         new_data = {
             "file_path":"",
@@ -84,79 +82,35 @@ def eval_func_make_new_json(distmat, max_rank=50, query=None, gallery=None, log_
         new_data['real_label'] = data[3]['real_label']
         new_load_data.append(new_data)
     index_flag = [1] * len(gallery)
-    # cases_data = []
-    # for i,(query_,index) in enumerate(zip(query,indices)):
-    #     case = {
-    #         "query_path" : "",
-    #         "query_pre_label": "", 
-    #         "query_real_label": "", 
-    #         "top_50_results_distmat" : "",
-    #         "top_50_results_file_path" : "",
-    #         "top_50_results_pre_label": "" ,
-    #         "top_50_results_real_label": ""            
-    #         }
-    #     case["query_path"] = query_[0]
-    #     case['query_pre_label'] = query_[3]['pre_label']
-    #     case["query_real_label"] = query_[3]['real_label']
-    #     top_50_results_distmat = []
-    #     top_50_results_file_path = []
-    #     top_50_results_pre_label = []
-    #     top_50_results_real_label = []
-    #     for index_ in index[:50]:
-    #         top_50_results_distmat.append(str(distmat[i][index_]))
-    #         top_50_results_pre_label.append(gallery[index_][3]['pre_label'])
-    #         top_50_results_real_label.append(gallery[index_][3]['real_label'])
-    #         top_50_results_file_path.append(gallery[index_][0])
-    #     case["top_50_results_distmat"] = top_50_results_distmat
-    #     case['top_50_results_file_path'] = top_50_results_file_path
-    #     case['top_50_results_pre_label'] = top_50_results_pre_label
-    #     case["top_50_results_real_label"] = top_50_results_real_label
-    #     cases_data.append(case)
-    # print(len(cases_data))
-    # file_path_ = "/data3/laiping/recurrence/ALL_best_model/111/distmat_UCC.json"
-    # with open(file_path_,'w') as f:
-    #     json.dump(cases_data,f)
-
+    set_backpack_parameter = False
+    set_hat_parameter = False
+    set_UCC_parameter_0 = False
+    set_UCC_parameter_1 = False
+    set_LCC_parameter = False
+    if set_backpack_parameter:
+        index_range = 200
+        threshold_value = 0.3
+    if set_hat_parameter:
+        index_range = 5
+        threshold_value = 0.3
+    if set_UCC_parameter_0:
+        index_range = 1000
+        threshold_value = 1.1
+    if set_UCC_parameter_1:
+        index_range = 5
+        threshold_value = 0.4
+    if set_LCC_parameter:
+        index_range = 30
+        threshold_value = 0.5
     for i,(query_,index) in enumerate(zip(query,indices)):
         new_data = {
             "file_path":"",
             "pre_label":"",
             "real_label":"" 
         }
-        # print(query_,distmat[i][index[5]],gallery[index[5]])
-        # if i == 50:
-        #     break
-        
-        for index_ in index[:1000]: 
-            # import ipdb;ipdb.set_trace()
-            if(distmat[i][index_]) < 1.1: 
-    # # UCS
-    # # long find in short
-    # # hat #### 5 0.3 acc=83.46 ####
-    # # yellow find in black # 10 0.3 acc=83.27 # 5 0.3 acc=83.289
-    # # yellow find in other # 10 0.3 acc=83.36 # 20 0.3 
-    # # yellow find in other # 5 0.3 acc=83.46 # 10 0.3 acc=83.41 # 5 0.4 acc=83.32
-    # # backpack #####200 0.3 acc=84.33#####
-    # # yellow # 1.0 acc=78.1  #0.8 acc=78.6  #0.6 acc=79.6 #0.5 acc=79.98 #0.4 acc=80.38 # 0.3 acc=81.25
-    # # yellow find n/a and green #0.3 acc= 82.84 #0.2 acc=81.79 #0.25 # 50 0.3 acc=83.25 # 60 0.3 acc=83.35
-    # # yellow find n/a and green # 70 0.3 acc=83.46 #100 0.3 acc=83.64 #200 0.3 acc=83.74 #200 0.4 acc=81.59 #200 0.2 acc=82.37
-    # # yellow find in other # 100 0.3 acc=84.20 #####200 0.3 acc=84.33##### #500 0.3 acc=84.26 #300 0.3 acc=84.14 #400 0.3 acc=84.21
-    # # yellow find in other # 200 0.2 acc=82.79
-    # # green # 0.3 acc=79.92  #0.5 acc=79.54 #0.1 acc=80.21
-    # # UCC first ##### 1000 1.1 acc=71.92######
-    # # red find in 5,2,7 200 0.3 acc=65.48 # 50 0.3 acc=65.48 #20 0.3 acc=65.48 #20 0.4 acc=65.62 # 20 0.5 acc=65.71 # 20 0.6 acc=65.78 
-    # # 20 1.0 acc=65.17 #20 0.7 acc=65.79
-    # # red find in 5,2,11 #20 0.7 acc=65.84
-    # # red find in 5,2,10 ##20 0.7 acc=65.84 # 20 0.6 acc=
-    # # red find in other #20 0.7 acc=66.06 #100 0.7 acc=66.37 #200 0.7 acc=66.34 # 100 1.0 acc=63.91 #100 0.3 acc=65.63  # 1000 0.8 acc=66.56 # 1000 1.1 acc=54.3
-    # # red find in 5,2,10 # 500 0.9 acc=68.54 #1000 0.9 acc=68.54 # 1000 0.95 acc=70.13 #1000 1.0 acc=70.06 #2000 0.95 acc=70.13 
-    # # red find in 5,2,10 #2000 0.75 acc=66.27 ##### 1000 1.1 acc=71.92###### # 2000 1.1 acc=69.40 #500 acc=69.99
-    # # red find in 5 2 7 10 # 1000 1.1 acc=65.74 #500 1.1 acc=66.50 #200 0.95 acc=66.24
-    # # UCC second  #### 5 0.4 acc=72.07###
-    # # red find in 7 10 # 100 0.8 acc=70.17 #50 0.5 acc=71.86 # 20 0.5 acc=72.009 # 10 0.5 acc=72.04 # 10 0.6 acc=71.96
-    # # red find in 7 10 #### 5 0.4 acc=72.07### # 5 0.5 acc= 72.05 # 5 0.7 acc=71.86 # 5 0.3 acc=72.04 
-    # #LCC #####30 0.5 acc=90.68####
-    # #20 0.5 acc=90.63 #50 0.5 acc=90.5 #####30 0.5 acc=90.68####
+        for index_ in index[:index_range]: 
+            if(distmat[i][index_]) < threshold_value: 
+    
                 if index_flag[index_] ==  1:
                     new_data["file_path"] = gallery[index_][0]
                     new_data['pre_label'] = query_[3]['pre_label']
@@ -183,89 +137,24 @@ def eval_func_make_new_json(distmat, max_rank=50, query=None, gallery=None, log_
         if(data['pre_label'] == data['real_label']):
             acc_count += 1
             
-    print("accuracy: ",acc_count * 100 / len(new_load_data))
-    # with open("/data3/laiping/recurrence/ALL_best_model/attr_with_reid/Hat_new.json",'w') as f_1:
-    #     json.dump(new_load_data,f_1)
-    # with open("/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/backpack_after_yellow_after_green.json",'w') as f_1:
-    #     json.dump(new_load_data,f_1)
+    print("The new accuracy: ",acc_count * 100 / len(new_load_data))
+    # generate attr_reid json file
+    if set_backpack_parameter:
+        with open("##{your_folder}##/ALL_best_model/attr_with_reid/Backpack_new.json",'w') as f_1:
+            json.dump(new_load_data,f_1)
+    if set_hat_parameter:
+        with open("##{your_folder}##/ALL_best_model/attr_with_reid/Hat_new.json",'w') as f_1:
+            json.dump(new_load_data,f_1)
+    if set_LCC_parameter:
+        with open("##{your_folder}##/ALL_best_model/attr_with_reid/LCC_new.json",'w') as f_1:
+            json.dump(new_load_data,f_1)
+    if set_UCC_parameter_0:
+        with open("##{your_folder}##/ALL_best_model/attr_with_reid/UCC_new1.json",'w') as f_1:
+            json.dump(new_load_data,f_1)
+    if set_UCC_parameter_1:
+        with open("##{your_folder}##/ALL_best_model/attr_with_reid/UCC_new2.json",'w') as f_1:
+            json.dump(new_load_data,f_1)
     
-def eval_func_make_new_json_1(distmat,num_query=None, max_rank=50, query=None, gallery=None, log_path=None,gen_result=False,other_data=None):
-    num_q, num_g = distmat.shape
-    if num_g < max_rank:
-        max_rank = num_g
-        print("Note: number of gallery samples is quite small, got {}".format(num_g))
-    indices = np.argsort(distmat, axis=1)
-    
-    new_load_data = []
-    new_gallery_data = []
-    remain_gallery_data = []
-    for data in other_data:
-        new_data = {
-            "file_path":"",
-            "pre_label":"",
-            "real_label":"" 
-        }
-        new_data["file_path"] = data[0]
-        new_data['pre_label'] = data[3]['pre_label']
-        new_data['real_label'] = data[3]['real_label']
-        new_load_data.append(new_data)
-    for data in query:
-        new_data = {
-            "file_path":"",
-            "pre_label":"",
-            "real_label":"" 
-        }
-        new_data["file_path"] = data[0]
-        new_data['pre_label'] = data[3]['pre_label']
-        new_data['real_label'] = data[3]['real_label']
-        new_load_data.append(new_data)
-    index_flag = [1] * len(distmat)
-
-    for i,(query_,index) in enumerate(zip(query,indices)):
-        new_data = {
-            "file_path":"",
-            "pre_label":"",
-            "real_label":"" 
-        }
-        # UCC
-        # 5000 1.0 acc=65.663 # 2000 1.0 acc=
-        for index_ in index[:1000]: 
-            # import ipdb;ipdb.set_trace()
-            if index_ >= num_query:
-                if(distmat[i][index_]) < 1.0: 
-                    # import ipdb;ipdb.set_trace()
-                    if index_flag[index_] ==  1:
-                        new_data["file_path"] = gallery[index_-num_query][0]
-                        new_data['pre_label'] = query_[3]['pre_label']
-                        new_data['real_label'] = gallery[index_-num_query][3]['real_label']
-                        new_load_data.append(new_data)
-                        index_flag[index_] = 0
-                    elif index_flag[index_] == 0:
-                        continue
-    for i in range(num_query,len(distmat)):
-        # import ipdb;ipdb.set_trace()
-
-        new_data = {
-            "file_path":"",
-            "pre_label":"",
-            "real_label":"" 
-        }
-        if(index_flag[i] == 1):
-            new_data["file_path"] = gallery[i-num_query][0]
-            new_data['pre_label'] = gallery[i-num_query][3]['pre_label']
-            new_data['real_label'] = gallery[i-num_query][3]['real_label']
-            new_load_data.append(new_data) 
-           
-    print(len(new_load_data))
-    acc_count = 0
-    for data in new_load_data:
-        if(data['pre_label'] == data['real_label']):
-            acc_count += 1
-            
-    print("accuracy: ",acc_count * 100 / len(new_load_data))
-    # with open("/data3/laiping/recurrence/ALL_best_model/attr_with_reid/Hat_new.json",'w') as f_1:
-    #     json.dump(new_load_data,f_1)
-
 
 def eval_func(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=50, query=None, gallery=None, log_path=None,gen_result=False):
     """Evaluation with market1501 metric
@@ -530,11 +419,12 @@ class R1_mAP_eval():
             distmat = query_aggregate(distmat, q_pids)
         # features, _ = extract_features(model, cluster_loader, print_freq=50)
         # features = torch.cat([features[f].unsqueeze(0) for f, _, _ in sorted(dataset.train)], 0)
-        rerank_dist = compute_jaccard_distance(feats, k1=4, k2=4)
-        eval_func_make_new_json_1(rerank_dist,num_query = self.num_query , query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result,other_data= self.other_data)
+        # rerank_dist = compute_jaccard_distance(feats, k1=4, k2=4)
+        # eval_func_make_new_json_1(rerank_dist,num_query = self.num_query , query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result,other_data= self.other_data)
         
         cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids, query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result)
-        # eval_func_make_new_json(distmat,query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result,other_data= self.other_data)
+        # new method for attribute recognition
+        eval_func_make_new_json(distmat,query=self.query, gallery=self.gallery, log_path=self.log_path,gen_result=self.gen_result,other_data= self.other_data)
         return cmc, mAP, distmat, self.pids, self.camids, qf, gf
     
     

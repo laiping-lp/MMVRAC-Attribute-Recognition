@@ -51,141 +51,108 @@ class UAVHuman(ImageDataset):
         self.train = train
         
         # # """Comment for Competition Splits
-        # self.query = query
-        # self.gallery = gallery
+        self.query = query
+        self.gallery = gallery
         # """
-        # backpack first_attempt
-        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/backpack.json"
-        # with open(file_path,'r') as f:
-        #     load_data = json.load(f)
-        # new_load_data = []
-        # query_dir_for_test = []
-        # gallery_dir_for_test = []
-        # for data in load_data:
-        #     if data['pre_label'] == 4:
-        #         query_dir_for_test.append(data)
-        #     # elif data['pre_label'] in [0,3]:
-        #     elif data['pre_label'] in [0,1,2,3]:
-        #         gallery_dir_for_test.append(data)
-        #     else:
-        #         new_load_data.append(data)
-        # second_attempt
-        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/backpack_after_yellow.json"
-        # with open(file_path,'r') as f:
-        #     load_data = json.load(f)
-        # new_load_data = []
-        # query_dir_for_test = []
-        # gallery_dir_for_test = []
-        # for data in load_data:
-        #     if data['pre_label'] == 3:
-        #         query_dir_for_test.append(data)
-        #     elif data['pre_label'] == 0:
-        #         gallery_dir_for_test.append(data)
-        #     else:
-        #         new_load_data.append(data)
+        backpack_attempt = False
+        hat_attempt = False
+        UCC_first_attempt = False
+        UCC_second_attepmt = False
+        LCC_attepmt = False
+
+        if backpack_attempt:
+            # backpack first_attempt
+            file_path = "##{file_find_in_google_drive_link}##/ALL_best_model/attr_all_result_json_file/backpack_all.json"
+            with open(file_path,'r') as f:
+                load_data = json.load(f)
+            new_load_data = []
+            query_dir_for_test = []
+            gallery_dir_for_test = []
+            for data in load_data:
+                if data['pre_label'] == 4:
+                    query_dir_for_test.append(data)
+                elif data['pre_label'] in [0,1,2,3]:
+                    gallery_dir_for_test.append(data)
+                else:
+                    new_load_data.append(data)       
+            query = self._process_dir_json(query_dir_for_test, is_train=False)
+            gallery = self._process_dir_json(gallery_dir_for_test, is_train=False)
         
-        # UCC first attempt
-        file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/upper_color_all.json"
-        with open(file_path,'r') as f:
-            load_data = json.load(f)
-        new_load_data = []
-        query_dir_for_test = []
-        gallery_dir_for_test = []
-        for data in load_data:
-            if data['pre_label'] == 1:
-                query_dir_for_test.append(data)
-            # elif data['pre_label'] in [0,3]:
-            # elif data['pre_label'] in [0,2,3,4,5,6,7,8,9,10,11]:
-            elif data['pre_label'] in [5,2,10,7]:
-                gallery_dir_for_test.append(data)
-            else:
-                new_load_data.append(data)
+        if hat_attempt:
+            # hat first attempt
+            file_path = "##{file_find_in_google_drive_link}##/ALL_best_model/attr_all_result_json_file/hat_all.json"
+            with open(file_path,'r') as f:
+                load_data = json.load(f)
+            new_load_data = []
+            query_dir_for_test = []
+            gallery_dir_for_test = []
+            for data in load_data:
+                if data['pre_label'] == 3:
+                    query_dir_for_test.append(data)
+                elif data['pre_label'] in [0,1,2,4]:
+                    gallery_dir_for_test.append(data)
+                else:
+                    new_load_data.append(data)
+            query = self._process_dir_json(query_dir_for_test, is_train=False)
+            gallery = self._process_dir_json(gallery_dir_for_test, is_train=False)
         
-        # second attempt
-        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_with_reid/UCC_new1.json"
-        # with open(file_path,'r') as f:
-        #     load_data = json.load(f)
-        # new_load_data = []
-        # query_dir_for_test = []
-        # gallery_dir_for_test = []
-        # for data in load_data:
-        #     if data['pre_label'] == 1:
-        #         query_dir_for_test.append(data)
-        #     # elif data['pre_label'] in [0,3]:
-        #     # elif data['pre_label'] in [0,2,3,4,5,6,7,8,9,10,11]:
-        #     elif data['pre_label'] in [7,10]:
-        #         gallery_dir_for_test.append(data)
-        #     else:
-        #         new_load_data.append(data)
+        if UCC_first_attempt:
+            # UCC first attempt
+            file_path = "##{file_find_in_google_drive_link}##/ALL_best_model/attr_all_result_json_file/upper_color_all.json"
+            with open(file_path,'r') as f:
+                load_data = json.load(f)
+            new_load_data = []
+            query_dir_for_test = []
+            gallery_dir_for_test = []
+            for data in load_data:
+                if data['pre_label'] == 1:
+                    query_dir_for_test.append(data)
+                elif data['pre_label'] in [5,2,10]:
+                    gallery_dir_for_test.append(data)
+                else:
+                    new_load_data.append(data)
+            train = self._process_dir_json(new_load_data,is_train=True)        
+            query = self._process_dir_json(query_dir_for_test, is_train=False)
+            gallery = self._process_dir_json(gallery_dir_for_test, is_train=False)
+        
+        if UCC_second_attepmt:
+            # second attempt
+            file_path = "##{file_find_in_google_drive_link}##/ALL_best_model/attr_with_reid/UCC_new1.json"
+            with open(file_path,'r') as f:
+                load_data = json.load(f)
+            new_load_data = []
+            query_dir_for_test = []
+            gallery_dir_for_test = []
+            for data in load_data:
+                if data['pre_label'] == 1:
+                    query_dir_for_test.append(data)
+                elif data['pre_label'] in [7,10]:
+                    gallery_dir_for_test.append(data)
+                else:
+                    new_load_data.append(data)
+            train = self._process_dir_json(new_load_data,is_train=True)        
+            query = self._process_dir_json(query_dir_for_test, is_train=False)
+            gallery = self._process_dir_json(gallery_dir_for_test, is_train=False)
 
-        # LCC first_attempt
-        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/lower_color_all.json"
-        # with open(file_path,'r') as f:
-        #     load_data = json.load(f)
-        # new_load_data = []
-        # query_dir_for_test = []
-        # gallery_dir_for_test = []
-        # for data in load_data:
-        #     if data['pre_label'] == 9:
-        #         query_dir_for_test.append(data)
-        #     # elif data['pre_label'] in [0,3]:
-        #     elif data['pre_label'] in [2,7]:
-        #         gallery_dir_for_test.append(data)
-        #     else:
-        #         new_load_data.append(data)
-
-        # hat first attempt
-        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/hat_all.json"
-        # with open(file_path,'r') as f:
-        #     load_data = json.load(f)
-        # new_load_data = []
-        # query_dir_for_test = []
-        # gallery_dir_for_test = []
-        # for data in load_data:
-        #     if data['pre_label'] == 3:
-        #         query_dir_for_test.append(data)
-        #     elif data['pre_label'] in [0,1,2,4]:
-        #     # elif data['pre_label'] in [2]:
-        #         gallery_dir_for_test.append(data)
-        #     else:
-        #         new_load_data.append(data)
-
-        # UCS first attempt
-        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/upper_style_all.json"
-        # with open(file_path,'r') as f:
-        #     load_data = json.load(f)
-        # new_load_data = []
-        # query_dir_for_test = []
-        # gallery_dir_for_test = []
-        # for data in load_data:
-        #     if data['pre_label'] == 1:
-        #         query_dir_for_test.append(data)
-        #     # elif data['pre_label'] in [0,3]:
-        #     elif data['pre_label'] in [2]:
-        #         gallery_dir_for_test.append(data)
-        #     else:
-        #         new_load_data.append(data)
-                
-        # LCS first attempt
-        # file_path = "/data3/laiping/recurrence/ALL_best_model/attr_all_result_json_file/lower_style_all.json"
-        # with open(file_path,'r') as f:
-        #     load_data = json.load(f)
-        # new_load_data = []
-        # query_dir_for_test = []
-        # gallery_dir_for_test = []
-        # for data in load_data:
-        #     if data['pre_label'] == 2:
-        #         query_dir_for_test.append(data)
-        #     # elif data['pre_label'] in [0,3]:
-        #     elif data['pre_label'] in [1]:
-        #         gallery_dir_for_test.append(data)
-        #     else:
-        #         new_load_data.append(data)
-
-
-        train = self._process_dir_json(new_load_data,is_train=True)        
-        query = self._process_dir_json(query_dir_for_test, is_train=False)
-        gallery = self._process_dir_json(gallery_dir_for_test, is_train=False)
+        if LCC_attepmt:
+            # LCC first_attempt
+            file_path = "##{file_find_in_google_drive_link}##/ALL_best_model/attr_all_result_json_file/lower_color_all.json"
+            with open(file_path,'r') as f:
+                load_data = json.load(f)
+            new_load_data = []
+            query_dir_for_test = []
+            gallery_dir_for_test = []
+            for data in load_data:
+                if data['pre_label'] == 9:
+                    query_dir_for_test.append(data)
+                elif data['pre_label'] in [2,7]:
+                    gallery_dir_for_test.append(data)
+                else:
+                    new_load_data.append(data)
+            train = self._process_dir_json(new_load_data,is_train=True)        
+            query = self._process_dir_json(query_dir_for_test, is_train=False)
+            gallery = self._process_dir_json(gallery_dir_for_test, is_train=False)
+             
 
         self.train = train
         self.query = query
@@ -304,29 +271,16 @@ class UAVHuman(ImageDataset):
 
             pid_container.add(pid)
         # pid2label = {pid: label for label, pid in enumerate(pid_container)}
-        gender_number_list = [0] * 2
-        backpack_number_list = [0] * 5
-        hat_number_list = [0] * 5
         UCC_number_list = [0] * 12
-        UCS_number_list = [0] * 4
         LCC_number_list = [0] * 12
-        LCS_number_list = [0] * 4
 
-        set_gender_number = False
-        set_Backpack_number = False
-        set_Hat_number = False
+        
         set_UCC_number = False
-        set_UCS_number = False
         set_LCC_number = False
-        set_LCS_number = False
-
-        # set_gender_number = True
-        # set_Backpack_number = True
-        # set_Hat_number = True
-        set_UCC_number = True
-        # set_UCS_number = True
+        set_LCC_number_1 = False      
+        # set_UCC_number = True
         # set_LCC_number = True
-        # set_LCS_number = True
+        # set_LCC_number_1 = True
         dataset = []
         for img_path in img_paths:
             fname = osp.split(img_path)[-1]
@@ -369,67 +323,16 @@ class UAVHuman(ImageDataset):
                     "lower_color": lower_color,
                     "lower_style": lower_style
                 }
-                # control gender male and female rate 
-                if set_gender_number:
-                    if(gender == 0):
-                        if(gender_number_list[gender] > 1288):
+                # control LCC number for LCC
+                if set_LCC_number_1:
+                    if(lower_color == 6): # grey 100_1
+                        if(LCC_number_list[lower_color] > 100):
                             continue
                         else:
-                            gender_number_list[gender] += 1
+                            LCC_number_list[lower_color] += 1
                     else:
-                        gender_number_list[gender] += 1
-                # control backpack number
-                if set_Backpack_number:
-                    if(backpack == 0): # n/a number 4000_1  3000_2  2000_3 1000_4
-                        if(backpack_number_list[backpack] > 500):
-                            continue
-                        else:
-                            backpack_number_list[backpack] += 1
-                    elif(backpack == 4): # yellow number * 2_1 *3_2 *4_5 *5_6
-                        backpack_number_list[backpack] += 1
-                        backpack_number_list[backpack] += 1
-                        backpack_number_list[backpack] += 1
-                        backpack_number_list[backpack] += 1
-                        backpack_number_list[backpack] += 1
-                        dataset.append((img_path, pid, camid, attributes))
-                        dataset.append((img_path, pid, camid, attributes))
-                        dataset.append((img_path, pid, camid, attributes))
-                        dataset.append((img_path, pid, camid, attributes))
-                    elif(backpack == 3): # green number * 2_3 *3_5
-                        backpack_number_list[backpack] += 1
-                        backpack_number_list[backpack] += 1
-                        # backpack_number_list[backpack] += 1
-                        # dataset.append((img_path, pid, camid, attributes))
-                        dataset.append((img_path, pid, camid, attributes))
-                    else:
-                        backpack_number_list[backpack] += 1
-                # control hat number
-                if set_Hat_number:
-                    if(hat == 0):
-                        if(hat_number_list[hat] > 3000):
-                            continue
-                        else:
-                            hat_number_list[hat] += 1
-                    else:
-                        hat_number_list[hat] += 1
-                # control UCS number
-                if set_UCS_number:
-                    if(upper_style == 1): # long * 2
-                        UCS_number_list[upper_style] += 1
-                        UCS_number_list[upper_style] += 1
-                        dataset.append((img_path, pid, camid, attributes))   
-                    else:
-                        UCS_number_list[upper_style] += 1
-                # control LCS number
-                if set_LCS_number:
-                    if(lower_style == 1): # long 5000
-                        if(LCS_number_list[lower_style] > 5000):
-                            continue
-                        else:
-                            LCS_number_list[lower_style] += 1
-                    else:
-                        LCS_number_list[lower_style] += 1
-                # control UCC number
+                        LCC_number_list[lower_color] += 1
+                # control UCC number for UCC and UCS and LCS
                 if set_UCC_number:
                     if(upper_color == 7): # white 1000_1
                         if(UCC_number_list[upper_color] > 1000):
@@ -444,26 +347,12 @@ class UAVHuman(ImageDataset):
                     elif upper_color == 6: # grey * 2_1 *3_5
                         UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
-                        UCC_number_list[upper_color] += 1
-                        dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                     elif upper_color == 1: # red * 4_1 * 8_3 *10_4 *8_5
                         UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
-                        # UCC_number_list[upper_color] += 1
-                        # UCC_number_list[upper_color] += 1
-                        # UCC_number_list[upper_color] += 1
-                        # UCC_number_list[upper_color] += 1
-                        # UCC_number_list[upper_color] += 1
-                        # UCC_number_list[upper_color] += 1
-                        # dataset.append((img_path, pid, camid, attributes))
-                        # dataset.append((img_path, pid, camid, attributes))
-                        # dataset.append((img_path, pid, camid, attributes))
-                        # dataset.append((img_path, pid, camid, attributes))
-                        # dataset.append((img_path, pid, camid, attributes))
-                        # dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
@@ -483,50 +372,33 @@ class UAVHuman(ImageDataset):
                         UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
                         UCC_number_list[upper_color] += 1
-                        UCC_number_list[upper_color] += 1
-                        UCC_number_list[upper_color] += 1
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
-                        dataset.append((img_path, pid, camid, attributes))
-                        dataset.append((img_path, pid, camid, attributes))
-                    elif upper_color == 5: # multicolor 200_3
-                        if(UCC_number_list[upper_color] > 200):
-                            continue
-                        else:
-                            UCC_number_list[upper_color] += 1
                     else:
                         UCC_number_list[upper_color] += 1
-                # control LCC number
-                if set_LCC_number:
+                # control LCC number for hat
+                if set_LCC_number: 
                     if(lower_color == 6): # grey 100_1
                         if(LCC_number_list[lower_color] > 100):
                             continue
                         else:
                             LCC_number_list[lower_color] += 1
-                    # elif(lower_color == 2): # black 3000_2 5000_6
-                    #     if(LCC_number_list[lower_color] > 5000):
-                    #         continue
-                    #     else:
-                    #         LCC_number_list[lower_color] += 1
-                    elif(lower_color == 9): # dark brown * 2_2 *3_3 *4_4 *3_5
+                    elif(lower_color == 2): # black 5000
+                        if(LCC_number_list[lower_color] > 5000):
+                            continue
+                        else:
+                            LCC_number_list[lower_color] += 1
+                    elif(lower_color == 9): # dark brown * 3
                         LCC_number_list[lower_color] += 1
                         LCC_number_list[lower_color] += 1
                         LCC_number_list[lower_color] += 1
-                        LCC_number_list[lower_color] += 1
-                        LCC_number_list[lower_color] += 1
-                        dataset.append((img_path, pid, camid, attributes))
-                        dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                     elif(lower_color == 3): # blue * 2_5
                         LCC_number_list[lower_color] += 1
                         LCC_number_list[lower_color] += 1
-                        # LCC_number_list[lower_color] += 1
-                        # LCC_number_list[lower_color] += 1
-                        # dataset.append((img_path, pid, camid, attributes))
-                        # dataset.append((img_path, pid, camid, attributes))
                         dataset.append((img_path, pid, camid, attributes))
                     else:
                         LCC_number_list[lower_color] += 1
@@ -561,13 +433,8 @@ class UAVHuman(ImageDataset):
             # if relabel: pid = pid2label[pid] # relabel in common.py
             dataset.append((img_path, pid, camid, attributes))
         if is_train:
-            print(f"Gender_number_list: {gender_number_list}, sum: {sum(gender_number_list)}")
-            print(f"Backpack_number_list: {backpack_number_list}, sum: {sum(backpack_number_list)}")
-            print(f"Hat_number_list: {hat_number_list}, sum: {sum(hat_number_list)}")
             print(f"UCC_number_list: {UCC_number_list}, sum: {sum(UCC_number_list)}")
-            print(f"UCS_number_list: {UCS_number_list}, sum: {sum(UCS_number_list)}")
             print(f"LCC_number_list: {LCC_number_list}, sum: {sum(LCC_number_list)}")
-            print(f"LCS_number_list: {LCS_number_list}, sum: {sum(LCS_number_list)}")
         return dataset
 
     def get_imagedata_info(self, data):
