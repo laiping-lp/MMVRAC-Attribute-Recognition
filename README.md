@@ -13,6 +13,7 @@ bash enviroments.sh
 ```
 
 Note that, all experiments are conducted using single GPU: NVIDIA Titan RTX. 
+
 All experiments are based on the **vit_base** model. 
 
 ### 2. Google Drive Link
