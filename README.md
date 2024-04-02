@@ -2,6 +2,8 @@
 
 dataset: [UAVhuman-reid](https://github.com/sutdcv/UAV-Human)
 
+The ultimate results of our method is presented in **6.Results**.
+
 ### 1. Configurations
 First of all, create a conda env, then install packages detailed in enviroments.sh
 ```
@@ -10,7 +12,7 @@ conda activate reid
 bash enviroments.sh
 ```
 
-Note that, all experiments are conducted using single GPU: NVIDIA Titan RTX.
+Note that, all experiments are conducted using single GPU: NVIDIA Titan RTX. All experiments are based on the vit_base model. 
 
 ### 2. Google Drive Link
 
