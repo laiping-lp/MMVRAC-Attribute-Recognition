@@ -192,13 +192,13 @@ def only_attribute_recognition_vit_do_train_with_amp(cfg,
                 if(best[i] < accuracy_per_attribute[i]):
                     best[i] = accuracy_per_attribute[i]
                     best_index[i] = epoch
-                    if cfg.MODEL.DIST_TRAIN:
-                        if dist.get_rank() == 0:
-                            torch.save(model.state_dict(),
-                                    os.path.join(log_path, name[i] + '_best.pth'))
-                    elif i in cfg.SAVE_MODEL:
-                        torch.save(model.state_dict(),
-                                os.path.join(log_path, name[i] + '_best.pth'))
+                    # if cfg.MODEL.DIST_TRAIN:
+                    #     if dist.get_rank() == 0:
+                    #         torch.save(model.state_dict(),
+                    #                 os.path.join(log_path, name[i] + '_best.pth'))
+                    # elif i in cfg.SAVE_MODEL:
+                    #     torch.save(model.state_dict(),
+                    #             os.path.join(log_path, name[i] + '_best.pth'))
             table = PrettyTable(["task", "gender", "backpack", "hat", "upper_color", "upper_style","lower_color",'lower_style'])
             formatted_accuracy_per_attribute_best = ["{:.2%}".format(accuracy) for accuracy in best]
             table.add_row(["Attribute Recognition"] + formatted_accuracy_per_attribute_best)

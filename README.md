@@ -109,7 +109,7 @@ Then,
 python test_attribute_recognition.py --config_file config/test_attr.yml
 ```
 
-### 5. Re-recognition to Improve Results
+### 5. ID-based Attribute Correction Strategy to Improve Results
 
 We use this trick to improve the accuracy for backpack, hat, UCC and LCC attributes. Our starting point for using this method is that we believe that the attributes of the same person should be consistent. Therefore, we use the best model trained by Reid to predict the distance between positive examples(we believe that this sample has a high recognition accuracy rate, so it is set as a positive example) and negative examples(we believe that this sample has a high recognition error rate, so it is set as a negative example), so that the negative examples which less than the set threshold have the same attribute label as the corresponding positive examples. The following files are used in this process:
 
@@ -123,7 +123,7 @@ Second, modify file_path as our related json file in google link.
 
 Then,  
 
-#### 5.1 Re-recognition for Backpack
+#### 5.1 Correction for Backpack
 
 Modify "__init__" in data/datasets/uavhuman.py begin at lines 24, change backpack_attempt to true, then
 
@@ -131,7 +131,7 @@ Modify "__init__" in data/datasets/uavhuman.py begin at lines 24, change backpac
 python test.py --config_file config/test.yml
 ```
 
-#### 5.2 Re-recognition for Hat
+#### 5.2 Correction for Hat
 
 Modify "__init__" in data/datasets/uavhuman.py begin at lines 24, change hat_attempt to true, then
 
@@ -139,7 +139,7 @@ Modify "__init__" in data/datasets/uavhuman.py begin at lines 24, change hat_att
 python test.py --config_file config/test.yml
 ```
 
-#### 5.3 Re-recognition for UCC
+#### 5.3 Correction for UCC
 
 ##### 5.3.1 First Attempt
 
@@ -159,7 +159,7 @@ Modify "__init__" in data/datasets/uavhuman.py begin at lines 24, change UCC_sec
 python test.py --config_file config/test.yml
 ```
 
-#### 5.4 Re-recognition for LCC
+#### 5.4 Correction for LCC
 
 Modify "__init__" in data/datasets/uavhuman.py begin at lines 24, change LCC_attempt to true, then
 

@@ -1,6 +1,6 @@
 MODEL:
   PRETRAIN_CHOICE: 'imagenet' # imagenet, LUP
-  PRETRAIN_PATH: "/data4/liyuke/checkpoint/jx_vit_base_p16_224-80ecf9dd.pth"
+  PRETRAIN_PATH: "/data5/liyuke/checkpoint/jx_vit_base_p16_224-80ecf9dd.pth"
   # PRETRAIN_PATH: "/data3/laiping/humanbench-model/vit_base.pth" # root of pretrain path
   # PRETRAIN_PATH: "/data3/laiping/humanbench-model/vit_large.pth" # root of pretrain path
   # PRETRAIN_PATH: "/data3/laiping/humanbench-model/vit_large_new.pth" # root of pretrain path
@@ -46,7 +46,7 @@ INPUT:
 DATASETS:
   TRAIN: ('UAVHuman',)
   TEST: ('UAVHuman',)
-  ROOT_DIR: ('/data4/liyuke') # root of datasets
+  ROOT_DIR: ('/data5/liyuke/datasets') # root of datasets
 
 DATALOADER:
   SAMPLER: 'softmax_triplet' # softmax_triplet, graph_sampler, single_domain, center_hard_sampler
@@ -55,11 +55,11 @@ DATALOADER:
   CAMERA_TO_DOMAIN: True
 
 SOLVER:
-  OPTIMIZER_NAME: 'AdamW' # AdamW, SAM
-  # OPTIMIZER_NAME: 'SGD' # AdamW, SAM
+  # OPTIMIZER_NAME: 'AdamW' # AdamW, SAM
+  OPTIMIZER_NAME: 'SGD' # AdamW, SAM
   MAX_EPOCHS: 20 # 60 for reid # 15 for attr_re
-  BASE_LR: 0.000035 # for AdamW
-  # BASE_LR: 0.01 # for SGD 
+  # BASE_LR: 0.000035 # for AdamW
+  BASE_LR: 0.01 # for SGD 
   # BASE_LR: 0.0001 # 0.0004 for msmt
   # BASE_LR: 0.0005 # humanbench vit_large
   # BASE_LR: 0.01 # humanbench vit_base
@@ -112,8 +112,8 @@ LOSS:
   FOCAL_LOSS: False
   LOGSOFTMAX_CENTER_LOSS: False
   ARCFACE: False
-  LSOFTMAX_LOSS: True
+  LSOFTMAX_LOSS: False
   CENTER_LOSS_WEIGHT: 0.005 ## just for attr center_loss
   L_MARGIN: 5 ## just for attr lsoftmax
 
-SAVE_MODEL: [0]
+SAVE_MODEL: []
